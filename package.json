@@ -1,0 +1,20 @@
+{
+  "name": "sovereignagent",
+  "version": "0.1.0",
+  "description": "Sovereign Agent orchestrator and sub-agents (prototype)",
+  "main": "SovereignAgent.js",
+  "scripts": {
+    "start": "node test.js",
+    "test": "node test.js"
+  },
+  "keywords": [],
+  "author": "normancomics",
+  "license": "MIT",
+  "dependencies": {
+    "@superfluid-finance/sdk-core": "^0.9.0",
+    "axios": "^1.14.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.0",
+    "ethers": "^5.8.0"
+  }
+}
