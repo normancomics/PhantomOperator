@@ -2,13 +2,13 @@ require('dotenv').config();
 const { Framework } = require('@superfluid-finance/sdk-core');
 const { ethers } = require('ethers');
 
-// Default to Base Goerli testnet chainId (user requested Base only)
-const DEFAULT_CHAIN_ID = 84531;
+// Default to Base mainnet chainId
+const DEFAULT_CHAIN_ID = 8453;
 
-const RPC_URL = process.env.RPC_URL || 'https://base-goerli.blockscout.com';
+const RPC_URL = process.env.RPC_URL || 'https://mainnet.base.org';
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const CHAIN_ID = process.env.CHAIN_ID ? Number(process.env.CHAIN_ID) : DEFAULT_CHAIN_ID;
-const SUPER_TOKEN = process.env.SUPER_TOKEN || 'fDAIx'; // test token symbol placeholder
+const SUPER_TOKEN = process.env.SUPER_TOKEN || 'USDCx'; // USDCx on Base mainnet
 
 if (!PRIVATE_KEY) {
   console.warn('SuperfluidService: PRIVATE_KEY not set in .env — Superfluid operations will fail until configured.');

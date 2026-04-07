@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "SovereignAgent",
+  "handle": "normancomics.base.eth",
+  "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
+  "version": "0.1.0",
+  "author": "normancomics",
+  "chainId": 8453,
+  "website": "https://github.com/normancomics/sovereignagent",
+  "skills": [
+    {
+      "id": "threat-scan",
+      "name": "Threat Scan",
+      "description": "Searches the public web for mentions of a person's name that contain PII (phone numbers, email addresses, SSNs, home address). Returns a threat report with severity levels.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "fullName", "type": "string", "description": "Full name of the person to scan for" }
+      ],
+      "outputs": [
+        {
+          "name": "threats",
+          "type": "array",
+          "description": "Array of detected threats with title, link, description, threatLevel (benign/high/critical), and reasons"
+        }
+      ],
+      "pricing": {
+        "perCallWei": "1000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["privacy", "pii", "threat-detection", "data-broker"]
+    },
+    {
+      "id": "data-removal",
+      "name": "Data Removal Request",
+      "description": "Submits opt-out / removal requests to known data broker endpoints on behalf of the user.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "threatUrl", "type": "string", "description": "URL of the page containing the PII to remove" },
+        { "name": "fullName", "type": "string", "description": "Full name of the person requesting removal" }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "object",
+          "description": "Object with broker name and status (success/failed)"
+        }
+      ],
+      "pricing": {
+        "perCallWei": "5000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["privacy", "data-removal", "opt-out", "broker"]
+    },
+    {
+      "id": "full-privacy-sweep",
+      "name": "Full Privacy Sweep",
+      "description": "Runs a full threat scan followed by automated removal requests for all high/critical findings, with real-time Superfluid micropayment streaming for the duration of the task.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "fullName", "type": "string", "description": "Full name of the person" },
+        { "name": "walletAddress", "type": "string", "description": "Wallet address to stream payment from" },
+        { "name": "flowRate", "type": "string", "description": "Superfluid flow rate in wei/second" }
+      ],
+      "outputs": [
+        { "name": "threatsFound", "type": "number", "description": "Total number of threats detected" },
+        { "name": "removalAttempts", "type": "number", "description": "Number of removal requests submitted" },
+        { "name": "flowTxHash", "type": "string", "description": "Transaction hash of the Superfluid flow start" }
+      ],
+      "pricing": {
+        "streamingToken": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+        "note": "Priced by streaming flow rate (set FLOW_RATE in env)"
+      },
+      "tags": ["privacy", "full-sweep", "superfluid", "streaming-payment"]
+    }
+  ],
+  "payment": {
+    "protocols": ["superfluid-cfa", "x402"],
+    "acceptedTokens": [
+      {
+        "symbol": "USDCx",
+        "address": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+        "network": "base"
+      }
+    ]
+  },
+  "registries": {
+    "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
+  }
+}

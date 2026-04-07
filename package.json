@@ -4,8 +4,10 @@
   "description": "Sovereign Agent orchestrator and sub-agents (prototype)",
   "main": "SovereignAgent.js",
   "scripts": {
-    "start": "node test.js",
-    "test": "node test.js"
+    "start": "node server.js",
+    "test": "node test.js",
+    "register": "node scripts/register.js",
+    "list-bazaar": "node scripts/list-on-bazaar.js"
   },
   "keywords": [],
   "author": "normancomics",
