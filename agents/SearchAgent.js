@@ -3,6 +3,38 @@ const cheerio   = require('cheerio');
 const RagService = require('../services/RagService');
 
 class SearchAgent {
+  /**
+   * Instance constructor — used by SovereignAgent.js for backward-compatible
+   * `new SearchAgent(config).scan(user)` calls.
+   */
+  constructor(config = {}) {
+    this.config = config;
+  }
+
+  /**
+   * Demo / backward-compatible instance method.
+   * Returns a single example exposure so the legacy pipeline (test.js,
+   * SovereignAgent.runPrivacyWorkflow) remains testable without live DDG calls.
+   */
+  async scan(user) {
+    const { email, name, country } = user;
+
+    return {
+      exposures: [
+        {
+          source: 'ExampleBroker',
+          risk: 'high',
+          details: `Demo exposure for ${email || name || 'user'} in ${country || 'unknown region'}`,
+          status: 'UNREMEDIATED',
+        },
+      ],
+    };
+  }
+
+  /**
+   * Static entry point used by server.js and the full-privacy-sweep skill.
+   * Performs a real DuckDuckGo search, re-ranks via RAG, and classifies threats.
+   */
   static async run(userInfo) {
     const query = `${userInfo.fullName}`;
     console.log(`SearchAgent: searching for ${query}`);

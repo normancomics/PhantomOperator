@@ -1,54 +1,68 @@
-require('dotenv').config();
-const { startSuperfluidFlow, stopSuperfluidFlow } = require('./services/SuperfluidService');
 const SearchAgent = require('./agents/SearchAgent');
 const BrokerAgent = require('./agents/BrokerAgent');
+const { startSuperfluidFlow, stopSuperfluidFlow } = require('./services/SuperfluidService');
 
 class SovereignAgent {
-  constructor() {}
+  constructor(config = {}) {
+    this.searchAgent = new SearchAgent(config.search || {});
+    this.brokerAgent = new BrokerAgent(config.broker || {});
+    this.superfluidConfig = config.superfluid || {};
+  }
 
-  async startDataRemovalTask(userInfo) {
-    console.log('Starting data removal task for', userInfo.fullName);
+  /**
+   * Scan for threats / exposures related to a user.
+   * @param {Object} user - { email, name, country?, ... }
+   * @returns {Promise<{ exposures: Array }>}
+   */
+  async scanExposures(user) {
+    return this.searchAgent.scan(user);
+  }
 
-    // Start payment stream (async, non-blocking)
-    try {
-      console.log('Starting Superfluid flow to fund task...');
-      const startTx = await startSuperfluidFlow(userInfo.walletAddress, userInfo.flowRate);
-      console.log('Flow started tx:', startTx);
-    } catch (err) {
-      console.error('Failed to start flow:', err.message || err);
-    }
+  /**
+   * Schedule / execute opt-outs for a list of exposures.
+   * @param {Array} exposures - output from scanExposures().exposures
+   * @param {Object} user - same user object used for scanExposures
+   * @returns {Promise<{ jobs: Array }>}
+   */
+  async scheduleOptOuts(exposures, user) {
+    return this.brokerAgent.scheduleOptOuts(exposures, user);
+  }
 
-    // Run Search Agent
-    let threats = [];
-    try {
-      threats = await SearchAgent.run(userInfo);
-      console.log('SearchAgent returned', threats.length, 'items');
-    } catch (err) {
-      console.error('SearchAgent failed:', err.message || err);
-    }
+  /**
+   * Open a Superfluid reward stream from configured wallet to a receiver.
+   * @param {string} to - receiver address
+   * @param {string} flowRate - flow rate per second (string)
+   * @returns {Promise<string>} txHash
+   */
+  async openRewardStream(to, flowRate) {
+    const txHash = await startSuperfluidFlow(to, flowRate);
+    return txHash;
+  }
 
-    // Filter high/critical threats and attempt removals
-    const toRemove = threats.filter(t => ['high', 'critical'].includes(t.threatLevel));
-    for (const item of toRemove) {
-      try {
-        await BrokerAgent.removeThreat(item);
-      } catch (err) {
-        console.error('BrokerAgent failed for', item.link, err.message || err);
-      }
-    }
+  /**
+   * Stop a Superfluid reward stream from configured wallet to a receiver.
+   * @param {string} to - receiver address
+   * @returns {Promise<string>} txHash
+   */
+  async stopRewardStream(to) {
+    const txHash = await stopSuperfluidFlow(to);
+    return txHash;
+  }
 
-    // Verification step placeholder (could poll broker replies)
-    console.log('Verification placeholder — marking task complete.');
+  /**
+   * End-to-end “run privacy workflow”:
+   *  - scan exposures
+   *  - schedule opt-outs
+   */
+  async runPrivacyWorkflow(user) {
+    const { exposures } = await this.scanExposures(user);
+    const { jobs } = await this.scheduleOptOuts(exposures, user);
 
-    // Stop payment stream
-    try {
-      const stopTx = await stopSuperfluidFlow(userInfo.walletAddress);
-      console.log('Flow stopped tx:', stopTx);
-    } catch (err) {
-      console.error('Failed to stop flow:', err.message || err);
-    }
-
-    console.log('Task finished for', userInfo.fullName);
+    return {
+      user,
+      exposures,
+      jobs,
+    };
   }
 }
 

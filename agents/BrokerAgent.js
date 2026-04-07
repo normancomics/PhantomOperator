@@ -1,24 +1,21 @@
-const axios = require('axios');
-
 class BrokerAgent {
-  static async removeThreat(threatInfo) {
-    console.log('BrokerAgent: attempting removal for', threatInfo.link);
+  constructor(config = {}) {
+    this.config = config;
+  }
 
-    // Placeholder: no universal broker API — attempt a POST to a sample endpoint
-    try {
-      // NOTE: Replace with real broker endpoints or automation via Playwright/Selenium
-      const resp = await axios.post('https://example.com/opt-out', { threat: threatInfo }, { timeout: 15000 }).catch(e => null);
-      if (resp && resp.status === 200) {
-        console.log('BrokerAgent: removal request accepted for', threatInfo.link);
-        return { broker: 'example', status: 'success' };
-      }
-    } catch (err) {
-      console.error('BrokerAgent error:', err.message || err);
-    }
+  /**
+   * Demo implementation: map exposures to "jobs" so the flow is visible.
+   * Later you'll plug in real broker-specific workflows here.
+   */
+  async scheduleOptOuts(exposures, user) {
+    const jobs = exposures.map((exp, idx) => ({
+      broker: exp.source,
+      job_id: `job-${idx + 1}`,
+      status: 'PENDING',
+      notes: `Demo opt-out job for ${user.email || user.name || 'user'} at ${exp.source}`,
+    }));
 
-    // Fallback: return failure (the orchestrator can retry or escalate)
-    console.log('BrokerAgent: no removal performed for', threatInfo.link);
-    return { broker: null, status: 'failed' };
+    return { jobs };
   }
 }
 
