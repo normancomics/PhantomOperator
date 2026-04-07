@@ -1,0 +1,60 @@
+[
+  {
+    "type": "function",
+    "name": "registerAgent",
+    "inputs": [
+      { "name": "metadataURI", "type": "string", "internalType": "string" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updateMetadata",
+    "inputs": [
+      { "name": "metadataURI", "type": "string", "internalType": "string" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getAgentMetadata",
+    "inputs": [
+      { "name": "agent", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      { "name": "metadataURI", "type": "string", "internalType": "string" },
+      { "name": "registeredAt", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isRegistered",
+    "inputs": [
+      { "name": "agent", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [
+      { "name": "", "type": "bool", "internalType": "bool" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AgentRegistered",
+    "inputs": [
+      { "name": "agent", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "metadataURI", "type": "string", "indexed": false, "internalType": "string" },
+      { "name": "registeredAt", "type": "uint256", "indexed": false, "internalType": "uint256" }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "MetadataUpdated",
+    "inputs": [
+      { "name": "agent", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "metadataURI", "type": "string", "indexed": false, "internalType": "string" }
+    ]
+  }
+]

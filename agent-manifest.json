@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "SovereignAgent",
+  "handle": "normancomics.base.eth",
+  "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
+  "version": "0.1.0",
+  "author": {
+    "name": "normancomics",
+    "address": "0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7",
+    "ens": "normancomics.eth",
+    "baseEns": "normancomics.base.eth",
+    "superfluidIdentity": "normancomics.reserve.superfluid.eth"
+  },
+  "chainId": 8453,
+  "website": "https://github.com/normancomics/sovereignagent",
+  "skills": [
+    {
+      "id": "threat-scan",
+      "name": "Threat Scan",
+      "description": "Searches the public web for mentions of a person's name that contain PII (phone numbers, email addresses, SSNs, home address). Returns a threat report with severity levels.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "fullName", "type": "string", "description": "Full name of the person to scan for" }
+      ],
+      "outputs": [
+        {
+          "name": "threats",
+          "type": "array",
+          "description": "Array of detected threats with title, link, description, threatLevel (benign/high/critical), and reasons"
+        }
+      ],
+      "pricing": {
+        "perCallAmount": "1000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["privacy", "pii", "threat-detection", "data-broker"]
+    },
+    {
+      "id": "data-removal",
+      "name": "Data Removal Request",
+      "description": "Submits opt-out / removal requests to known data broker endpoints on behalf of the user.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "threatUrl", "type": "string", "description": "URL of the page containing the PII to remove" },
+        { "name": "fullName", "type": "string", "description": "Full name of the person requesting removal" }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "object",
+          "description": "Object with broker name and status (success/failed)"
+        }
+      ],
+      "pricing": {
+        "perCallAmount": "5000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["privacy", "data-removal", "opt-out", "broker"]
+    },
+    {
+      "id": "opsec-score",
+      "name": "OPSEC Exposure Score",
+      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0–100) with grade A–F and prioritised remediation steps. Ideal for red teamers, PERSEC auditors, and privacy-first individuals.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "fullName", "type": "string", "description": "Full legal name of the target (optional if handle or email provided)" },
+        { "name": "handle",   "type": "string", "description": "Online pseudonym / username to assess (optional)" },
+        { "name": "email",    "type": "string", "description": "Email address to include in the assessment (optional)" }
+      ],
+      "outputs": [
+        { "name": "score",           "type": "number",  "description": "Exposure score 0–100 (higher = worse OPSEC)" },
+        { "name": "grade",           "type": "string",  "description": "Letter grade A–F" },
+        { "name": "breakdown",       "type": "object",  "description": "Per-category sub-scores: searchExposure, dataBrokerExposure, pasteLeaks, socialFootprint" },
+        { "name": "topThreats",      "type": "array",   "description": "Top threat passages from the retrieved corpus with source URL and threat level" },
+        { "name": "recommendations", "type": "array",   "description": "Prioritised actionable remediation steps" }
+      ],
+      "pricing": {
+        "perCallAmount": "5000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["opsec", "persec", "privacy", "red-team", "exposure-score", "threat-intelligence"]
+    },
+    {
+      "id": "breach-check",
+      "name": "Breach & Credential Check",
+      "description": "Privacy-preserving breach and credential exposure check. Email breach lookup via HaveIBeenPwned (requires HIBP_API_KEY). Password check uses the HIBP k-anonymity range API — only a 5-char SHA-1 prefix is transmitted; the full credential never leaves the caller. Returns breach count, affected data classes, risk level, and remediation advice.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "email",    "type": "string", "description": "Email address to check against known breach databases (optional)" },
+        { "name": "password", "type": "string", "description": "Plaintext password to check via k-anonymity (optional — hash prefix only transmitted)" }
+      ],
+      "outputs": [
+        { "name": "emailReport",    "type": "object", "description": "Breach report: breachCount, breaches[], riskLevel, criticalDataClasses, recommendation" },
+        { "name": "passwordCheck",  "type": "object", "description": "k-anonymity result: { pwned: boolean, count: number }" }
+      ],
+      "pricing": {
+        "perCallAmount": "2000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["breach", "credentials", "haveibeenpwned", "k-anonymity", "privacy", "opsec"]
+    },
+    {
+      "id": "metadata-audit",
+      "name": "Metadata Privacy Audit",
+      "description": "Fetch any HTTP/HTTPS URL and extract all metadata that could de-anonymise its author or expose infrastructure details: HTTP response headers (Server, X-Powered-By, X-Generator), HTML <meta> tags (author, geo.*, email), inline HTML comments (version strings, file paths), and third-party resource origins. Each finding is classified critical / high / medium / low with a remediation recommendation.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "url", "type": "string", "description": "Absolute HTTP/HTTPS URL to audit" }
+      ],
+      "outputs": [
+        { "name": "overallRisk",    "type": "string", "description": "Highest risk level found: critical / high / medium / low / none" },
+        { "name": "findingCounts",  "type": "object", "description": "Count of findings per risk level" },
+        { "name": "findings",       "type": "array",  "description": "Array of findings with category, riskLevel, label, field, value" },
+        { "name": "recommendation", "type": "string", "description": "Consolidated remediation guidance" }
+      ],
+      "pricing": {
+        "perCallAmount": "1000000",
+        "token": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
+      },
+      "tags": ["metadata", "opsec", "privacy", "http-headers", "exif", "fingerprinting", "pentesting"]
+    },
+    {
+      "id": "full-privacy-sweep",
+      "name": "Full Privacy Sweep",
+      "description": "Runs a full threat scan followed by automated removal requests for all high/critical findings, with real-time Superfluid micropayment streaming for the duration of the task.",
+      "version": "0.1.0",
+      "inputs": [
+        { "name": "fullName", "type": "string", "description": "Full name of the person" },
+        { "name": "walletAddress", "type": "string", "description": "Wallet address to stream payment from" },
+        { "name": "flowRate", "type": "string", "description": "Superfluid flow rate in wei/second" }
+      ],
+      "outputs": [
+        { "name": "threatsFound", "type": "number", "description": "Total number of threats detected" },
+        { "name": "removalAttempts", "type": "number", "description": "Number of removal requests submitted" },
+        { "name": "flowTxHash", "type": "string", "description": "Transaction hash of the Superfluid flow start" }
+      ],
+      "pricing": {
+        "streamingToken": "USDCx",
+        "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+        "note": "Priced by streaming flow rate (set FLOW_RATE in env)"
+      },
+      "tags": ["privacy", "full-sweep", "superfluid", "streaming-payment"]
+    }
+  ],
+  "payment": {
+    "protocols": ["superfluid-cfa", "x402"],
+    "acceptedTokens": [
+      {
+        "symbol": "USDCx",
+        "address": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+        "network": "base"
+      }
+    ]
+  },
+  "registries": {
+    "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
+  }
+}
