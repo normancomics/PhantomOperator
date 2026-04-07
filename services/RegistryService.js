@@ -59,7 +59,10 @@ async function registerIdentity(metadataURI) {
   const agentAddress = await wallet.getAddress();
 
   // Check if already registered
-  const alreadyRegistered = await contract.isRegistered(agentAddress).catch(() => false);
+  const alreadyRegistered = await contract.isRegistered(agentAddress).catch(err => {
+    console.warn('Warning: isRegistered() call failed — assuming not registered. Error:', err.message);
+    return false;
+  });
   if (alreadyRegistered) {
     console.log(`Agent ${agentAddress} is already registered in the Identity Registry.`);
     console.log('Updating metadata URI instead...');
@@ -92,7 +95,10 @@ async function initializeReputation() {
   const agentAddress = await wallet.getAddress();
 
   // Check if already initialized
-  const alreadyInitialized = await contract.isInitialized(agentAddress).catch(() => false);
+  const alreadyInitialized = await contract.isInitialized(agentAddress).catch(err => {
+    console.warn('Warning: isInitialized() call failed — assuming not initialized. Error:', err.message);
+    return false;
+  });
   if (alreadyInitialized) {
     console.log(`Agent ${agentAddress} already has a reputation record.`);
     const rep = await getReputation(agentAddress);

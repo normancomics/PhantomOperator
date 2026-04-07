@@ -89,6 +89,9 @@ async function main() {
     try {
       const csAgent = await csRegisterAgent(manifest, agentAddress);
       const csAgentId = csAgent.id || csAgent.agentId;
+      if (!csAgentId) {
+        throw new Error('CryptoSkill API did not return an agent ID. Response: ' + JSON.stringify(csAgent));
+      }
       console.log(`  ✅ Agent registered on CryptoSkill. ID: ${csAgentId}`);
 
       for (const skill of manifest.skills) {

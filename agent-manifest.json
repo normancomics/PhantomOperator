@@ -24,7 +24,7 @@
         }
       ],
       "pricing": {
-        "perCallWei": "1000000",
+        "perCallAmount": "1000000",
         "token": "USDCx",
         "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
       },
@@ -47,7 +47,7 @@
         }
       ],
       "pricing": {
-        "perCallWei": "5000000",
+        "perCallAmount": "5000000",
         "token": "USDCx",
         "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b"
       },

@@ -129,13 +129,13 @@ async function validatePayment(xPaymentHeader, skillId, resourcePath) {
     return { valid: false, error: `Wrong payment token: expected ${PAYMENT_TOKEN_ADDRESS}` };
   }
 
-  // Recover signer from EIP-712 signature
-  // The signed message is a hash of the payload object
+  // Recover signer from the payment signature.
+  // x402 proofs are signed over the JSON-serialized payload using ethers.utils.signMessage
+  // (a personal_sign / eth_sign compatible signature). If your x402 client uses
+  // EIP-712 typed-data signing instead, replace hashMessage with
+  // ethers.utils._TypedDataEncoder.hash(domain, types, value) and update accordingly.
   try {
-    const messageHash = ethers.utils.hashMessage(
-      JSON.stringify(payload)
-    );
-    const payerAddress = ethers.utils.recoverAddress(messageHash, signature);
+    const payerAddress = ethers.utils.verifyMessage(JSON.stringify(payload), signature);
     return { valid: true, payerAddress };
   } catch (err) {
     return { valid: false, error: `Signature verification failed: ${err.message}` };
@@ -157,7 +157,10 @@ async function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')));
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
+      resolve(JSON.parse(raw || '{}'));
+    });
     req.on('error', reject);
   });
 }
@@ -218,12 +221,15 @@ async function handlePaidSkill(req, res, skillId) {
     res.setHeader('X-PAYMENT-RESPONSE', JSON.stringify({ status: 'settled' }));
     sendJson(res, 200, { skill: skillId, result });
   } catch (err) {
-    console.error(`Skill ${skillId} error:`, err.message);
+    const safeSkillId = VALID_SKILL_IDS.has(skillId) ? skillId : 'unknown';
+    console.error('Skill error [' + safeSkillId + ']:', err.message);
     sendJson(res, 500, { error: err.message });
   }
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
+
+const VALID_SKILL_IDS = new Set(Object.keys(SKILL_PRICES));
 
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
@@ -232,7 +238,11 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url === '/manifest') return await handleManifest(req, res);
     if (req.method === 'GET' && url === '/health') return await handleHealth(req, res);
     if (req.method === 'POST' && url.startsWith('/skills/')) {
-      const skillId = url.replace('/skills/', '');
+      const skillId = url.slice('/skills/'.length);
+      // Validate skillId against the known set before any further use (prevents tainted input propagation)
+      if (!VALID_SKILL_IDS.has(skillId)) {
+        return sendJson(res, 404, { error: 'Unknown skill' });
+      }
       return await handlePaidSkill(req, res, skillId);
     }
     sendJson(res, 404, { error: 'Not found', hint: 'Available: GET /manifest, GET /health, POST /skills/{skill-id}' });
