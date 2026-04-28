@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "@superfluid-finance/sdk-core": "^0.8.0",
-    "axios": "^1.14.0",
+    "axios": "^1.15.0",
     "cheerio": "1.0.0-rc.12",
     "dotenv": "16.0.3",
     "ethers": "5.7.2"
