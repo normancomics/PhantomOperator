@@ -1,8 +1,8 @@
 {
-  "name": "sovereignagent",
+  "name": "phantom-operator",
   "version": "0.1.0",
-  "description": "Sovereign Agent orchestrator and sub-agents (prototype)",
-  "main": "SovereignAgent.js",
+  "description": "PhantomOperator orchestrator and sub-agents (prototype)",
+  "main": "PhantomOperator.js",
   "scripts": {
     "start": "node test.js",
     "test": "node test.js",

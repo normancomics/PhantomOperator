@@ -1,8 +1,8 @@
-# sovereignagent
+# PhantomOperator
 
-SovereignAgent — automated privacy-removal orchestration with real-time Superfluid payouts on Base.
+PhantomOperator — automated privacy-removal orchestration with real-time Superfluid payouts on Base.
 
-Why SovereignAgent?
+Why PhantomOperator?
 - Automated data-broker opt-outs and prioritised threat remediation
 - Real-time micropayments via Superfluid USDCx on Base (streams & IDAs)
 - On-chain agent identity & skill registration (8004scan.io, CryptoSkill.org)
@@ -13,7 +13,7 @@ Getting started
 
 1) Configure environment
 	- Copy `.env.example` to `.env` and fill in your keys (never commit `.env`).
-	- At minimum set `PRIVATE_KEY` and `SOVEREIGN_AGENT_ADDRESS`.
+	- At minimum set `PRIVATE_KEY` and `PHANTOM_OPERATOR_ADDRESS`.
 
 2) Install Node dependencies
 ```bash
@@ -44,7 +44,7 @@ Required `.env` variables for registration:
 | Variable | Description |
 |----------|-------------|
 | `PRIVATE_KEY` | Agent owner wallet private key (signs on-chain txs) |
-| `SOVEREIGN_AGENT_ADDRESS` | Deployed agent wallet address |
+| `PHANTOM_OPERATOR_ADDRESS` | Deployed agent wallet address |
 | `BASE_RPC_URL` | Base mainnet JSON-RPC (default: `https://mainnet.base.org`) |
 | `AGENT_SERVICE_ENDPOINT` | Public HTTPS URL where the agent accepts requests |
 | `AGENT_METADATA_URI` | IPFS or HTTPS URI to the agent metadata JSON |
@@ -80,10 +80,10 @@ Services
 
 Registration & Priority Payouts
 
-Want priority payouts and featured placement? Create a registration issue using the `Register Sovereign Agent` template in `.github/ISSUE_TEMPLATE/register_agent.md` and include your ENS / on-chain identity (e.g., `normancomics.base.eth`).
+Want priority payouts and featured placement? Create a registration issue using the `Register PhantomOperator Agent` template in `.github/ISSUE_TEMPLATE/register_agent.md` and include your ENS / on-chain identity (e.g., `normancomics.base.eth`).
 
 Files added in this repo
-- `SovereignAgent.js` — orchestrator
+- `PhantomOperator.js` — orchestrator
 - `agents/SearchAgent.js` — search & threat analysis
 - `agents/BrokerAgent.js` — data broker automation (placeholder)
 - `services/RegistryService.js` — on-chain identity & reputation registry

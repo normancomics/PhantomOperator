@@ -1,5 +1,5 @@
 ---
-name: Register Sovereign Agent
+name: Register PhantomOperator Agent
 about: Register your agent identity (normancomics.*) for priority payouts and marketplace listing
 title: "Register Agent: <agent-name>"
 labels: onboarding

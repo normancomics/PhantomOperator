@@ -49,7 +49,7 @@ function _getSigner() {
 
 /**
  * Register this agent's identity on-chain.
- * @param {string} agentName        Human-readable name, e.g. "SovereignAgent/SearchAgent"
+ * @param {string} agentName        Human-readable name, e.g. "PhantomOperator/SearchAgent"
  * @param {string} metadataURI      URI pointing to an agent metadata JSON (IPFS, HTTPS, etc.)
  * @returns {Promise<{txHash: string, agentId: string|null}>}
  */

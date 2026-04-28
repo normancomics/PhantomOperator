@@ -12,7 +12,7 @@ class SearchAgent {
 
   static async performDuckDuckGoSearch(query, num = 10) {
     const url = 'https://html.duckduckgo.com/html';
-    const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; SovereignAgent/1.0)' };
+    const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; PhantomOperator/1.0)' };
     const params = new URLSearchParams();
     params.append('q', query);
 

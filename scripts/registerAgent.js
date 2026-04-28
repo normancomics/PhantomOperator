@@ -2,7 +2,7 @@
 /**
  * scripts/registerAgent.js
  *
- * Full registration pipeline for SovereignAgent sub-agents:
+ * Full registration pipeline for PhantomOperator sub-agents:
  *
  *   1. On-chain Identity Registry  (0x8004A169FB4a3325136EB29fA0ceB6D2e539a432, Base mainnet)
  *   2. On-chain Reputation/Skill Registry  (0x8004BAa17C55a88189AE136b182e5fdA19dE9b63, Base mainnet)
@@ -15,7 +15,7 @@
  *
  * Required .env vars:
  *   PRIVATE_KEY             — wallet private key (agent owner / signer)
- *   SOVEREIGN_AGENT_ADDRESS — deployed agent wallet address
+ *   PHANTOM_OPERATOR_ADDRESS — deployed agent wallet address
  *   BASE_RPC_URL            — Base mainnet JSON-RPC (default: https://mainnet.base.org)
  *   AGENT_SERVICE_ENDPOINT  — public HTTPS URL clients will call
  *   CRYPTOSKILL_API_KEY     — CryptoSkill.org API key (if required)
@@ -36,7 +36,7 @@ const { registerWithSuperfluidX402, listInX402Bazaar } = require('../services/X4
 
 // ─── Agent configuration ──────────────────────────────────────────────────────
 
-const AGENT_ADDRESS = process.env.SOVEREIGN_AGENT_ADDRESS;
+const AGENT_ADDRESS = process.env.PHANTOM_OPERATOR_ADDRESS;
 const SERVICE_ENDPOINT = process.env.AGENT_SERVICE_ENDPOINT || '';
 const METADATA_URI = process.env.AGENT_METADATA_URI || '';
 const PRICE_PER_REQUEST = process.env.PRICE_PER_REQUEST || '0.001';
@@ -44,7 +44,7 @@ const PRICE_PER_REQUEST = process.env.PRICE_PER_REQUEST || '0.001';
 // Agents and their novel skills to register
 const AGENTS = [
   {
-    name: 'SovereignAgent/SearchAgent',
+    name: 'PhantomOperator/SearchAgent',
     description: 'Automated privacy-threat search agent — scans public web sources for PII exposure and returns a prioritised threat list.',
     skills: [
       {
@@ -62,7 +62,7 @@ const AGENTS = [
     ],
   },
   {
-    name: 'SovereignAgent/BrokerAgent',
+    name: 'PhantomOperator/BrokerAgent',
     description: 'Data-broker opt-out automation agent — submits opt-out / removal requests to data brokers on behalf of the user.',
     skills: [
       {
@@ -96,7 +96,7 @@ function step(label) {
 
 async function main() {
   required('PRIVATE_KEY');
-  required('SOVEREIGN_AGENT_ADDRESS');
+  required('PHANTOM_OPERATOR_ADDRESS');
 
   for (const agent of AGENTS) {
     // ── 1. Check / register on-chain identity ────────────────────────────────

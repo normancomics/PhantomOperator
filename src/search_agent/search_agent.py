@@ -13,7 +13,7 @@ def duckduckgo_search(query, num_results=10):
     Uses the `html.duckduckgo.com/html` endpoint to avoid heavy JS.
     """
     search_url = f"https://html.duckduckgo.com/html?q={quote_plus(query)}"
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; SovereignAgent/1.0)"}
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; PhantomOperator/1.0)"}
     resp = requests.post(search_url, data={"q": query}, headers=headers, timeout=15)
     resp.raise_for_status()
 

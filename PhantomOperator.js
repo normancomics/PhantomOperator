@@ -3,7 +3,7 @@ const { startSuperfluidFlow, stopSuperfluidFlow } = require('./services/Superflu
 const SearchAgent = require('./agents/SearchAgent');
 const BrokerAgent = require('./agents/BrokerAgent');
 
-class SovereignAgent {
+class PhantomOperator {
   constructor() {}
 
   async startDataRemovalTask(userInfo) {
@@ -52,4 +52,4 @@ class SovereignAgent {
   }
 }
 
-module.exports = SovereignAgent;
+module.exports = PhantomOperator;
