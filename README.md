@@ -15,6 +15,36 @@ Created by normancomics — normancomics.eth · normancomics.base.eth · normanc
 - Designed for integration with RAG and MCP so other agents / LLMs can call PhantomOperator as a backend.
 - Intended for listing on **CryptoSkill**, **Coinbase CDP Bazaar**, **8004scan.io**, and other agent registries.
 
+
+> ## 🚀 Render deployment (`render-x402` branch)
+>
+> This branch runs PhantomOperator as a hosted x402 service on Render's **free** tier. It needs **no paid API keys** and **no private keys**.
+>
+> | Skill | Price | Data source |
+> |---|---|---|
+> | `POST /skills/metadata-audit` `{url}` | $0.05 | Direct fetch of the URL you supply |
+> | `POST /skills/threat-scan` `{fullName, consent:true}` | $0.10 | DuckDuckGo HTML search |
+> | `POST /skills/opsec-score` `{fullName?, handle?, email?, consent:true}` | $0.25 | DuckDuckGo HTML search |
+>
+> Payments are real **x402 v2** (`exact` scheme). They are made in plain **USDC on Base mainnet**, paid to `normancomics.eth` (`0x3d95D4A6DbaE0Cd0643a82b13A13b08921D6ADf7`), and settled through the keyless PayAI facilitator. A payment is settled only after a successful response. Invalid input and errors are not charged.
+>
+> **Free endpoints:** `/`, `/health`, `/manifest`, `/skills`, `/terms`, `/llms.txt`, `/.well-known/x402`.
+>
+> **Disabled on this deployment:**
+> - `breach-check`: needs a paid HIBP API key.
+> - `data-removal`: was a stub that didn't submit anything.
+> - `full-privacy-sweep`: needs a wallet private key and Superfluid.
+> - Monero, Solana and Python tooling.
+>
+> **Render setup:**
+> - **Build:** `npm install --omit=optional`
+> - **Start:** `npm start`
+> - **Health check:** `/health`
+> - **Env** (all optional): `PAY_TO`, `FACILITATOR_URL`, `RATE_LIMIT_PUBLIC` (60), `RATE_LIMIT_PAID` (10), `MAX_BODY_BYTES`. Render sets `PORT` and `RENDER_EXTERNAL_URL` automatically.
+>
+> Use is subject to [TERMS.md](TERMS.md). Scans are for **yourself or authorized targets only**.
+
+
 ---
 
 ## Architecture Overview

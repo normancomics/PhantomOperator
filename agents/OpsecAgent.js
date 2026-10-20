@@ -90,6 +90,12 @@ class OpsecAgent {
       queries.map(q => SearchAgent.performDuckDuckGoSearch(q, 15))
     );
 
+    // If every search failed (e.g. search engine unreachable), fail loudly instead of
+    // returning a misleadingly low score. The server does not charge for errors.
+    if (settled.every(r => r.status === 'rejected')) {
+      throw new Error('Public web search is unavailable right now; please retry later');
+    }
+
     const allResults = settled
       .filter(r => r.status === 'fulfilled')
       .flatMap(r => r.value);

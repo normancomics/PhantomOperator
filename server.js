@@ -1,474 +1,248 @@
 /**
  * server.js
  *
- * PhantomOperator HTTP server with x402 + (future) Monero payment middleware.
+ * PhantomOperator HTTP server, Render-ready, with real x402 v2 payments
+ * (plain USDC on Base mainnet, keyless PayAI facilitator, payTo normancomics.eth).
  *
- * x402 is a payment protocol built on HTTP 402 Payment Required.
- * When a caller hits a paid endpoint without a valid payment proof the server
- * returns 402 with a JSON body describing how to pay (token, amount, address).
- * The caller attaches a signed payment proof in the X-PAYMENT header and
- * retries. The server validates the proof and serves the response.
+ * Only skills that use free data sources are enabled. No paid API keys needed.
  *
- * Endpoints:
- *   GET  /manifest                     — public: returns agent-manifest.json
- *   GET  /health                       — public: liveness check
- *   POST /skills/threat-scan           — PAID: PII threat scan
- *   POST /skills/data-removal          — PAID: data broker opt-out
- *   POST /skills/full-privacy-sweep    — PAID: full sweep (+ orchestration)
- *   POST /skills/opsec-score           — PAID: multi-vector OPSEC exposure score
- *   POST /skills/breach-check          — PAID: HIBP k-anonymity breach lookup
- *   POST /skills/metadata-audit        — PAID: HTTP/HTML metadata privacy audit
+ * Free:
+ *   GET  /                 service index
+ *   GET  /health           liveness
+ *   GET  /manifest         agent-manifest.json
+ *   GET  /skills           skill catalog with prices
+ *   GET  /terms            terms of use / acceptable use
+ *   GET  /llms.txt         agent-readable index
+ *   GET  /.well-known/x402 x402 resource list
+ * Paid (x402, POST JSON):
+ *   POST /skills/metadata-audit  $0.05  HTTP/HTML metadata privacy audit of a URL
+ *   POST /skills/threat-scan     $0.10  public-web PII exposure scan for a name (self/authorized only)
+ *   POST /skills/opsec-score     $0.25  multi-vector OPSEC exposure score (self/authorized only)
  *
- * Run: node server.js
+ * Disabled on this deployment (see README): breach-check (needs paid HIBP key),
+ * data-removal (was a stub that didn't submit anything), full-privacy-sweep
+ * (needs a funded wallet private key + Superfluid), Solana and Python tooling.
  */
-require('dotenv').config();
-const http = require('http');
-const { ethers } = require('ethers');
+'use strict';
 
-const SearchAgent      = require('./agents/SearchAgent');
-const BrokerAgent      = require('./agents/BrokerAgent');
-const OpsecAgent       = require('./agents/OpsecAgent');
-const BreachAgent      = require('./agents/BreachAgent');
-const MetadataAgent    = require('./agents/MetadataAgent');
-const OrchestratorOperator = require('./operators/OrchestratorOperator');
-const manifest         = require('./agent-manifest.json');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const SearchAgent   = require('./agents/SearchAgent');
+const OpsecAgent    = require('./agents/OpsecAgent');
+const MetadataAgent = require('./agents/MetadataAgent');
+const manifest      = require('./agent-manifest.json');
+const x402          = require('./lib/x402');
 const {
-  checkRateLimit,
-  setSecurityHeaders,
-  sanitizeString,
-  isValidEmail,
-  isValidHttpUrl,
-  RATE_LIMIT_PUBLIC,
-  RATE_LIMIT_PAID,
-  MAX_BODY_BYTES,
+  checkRateLimit, setSecurityHeaders, sanitizeString, isValidEmail, isValidHttpUrl,
+  RATE_LIMIT_PUBLIC, RATE_LIMIT_PAID, MAX_BODY_BYTES,
 } = require('./middleware/security');
 
 const PORT = process.env.PORT || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const TERMS = fs.readFileSync(path.join(__dirname, 'TERMS.md'), 'utf8');
 
-// ── x402 configuration ───────────────────────────────────────────────────────
-const PAYMENT_TOKEN_ADDRESS =
-  process.env.PAYMENT_TOKEN_ADDRESS ||
-  '0xD04383398dD2426297da660F9CCA3d439AF9ce1b';
-
-const PAYMENT_RECEIVER =
-  process.env.PAYMENT_RECEIVER_ADDRESS ||
-  process.env.SOVEREIGN_AGENT_ADDRESS ||
-  process.env.PHANTOM_OPERATOR_ADDRESS;
-
-const CHAIN_ID = process.env.CHAIN_ID ? Number(process.env.CHAIN_ID) : 8453;
-const MAX_TIMEOUT_SECONDS = 300;
-
-// ── Skill pricing (USDCx, 6 decimal places) ──────────────────────────────────
-const SKILL_PRICES = {
-  'threat-scan':         '1000000',   //  1.00 USDCx
-  'data-removal':        '5000000',   //  5.00 USDCx
-  'full-privacy-sweep':  '10000000',  // 10.00 USDCx
-  'opsec-score':         '5000000',   //  5.00 USDCx
-  'breach-check':        '2000000',   //  2.00 USDCx
-  'metadata-audit':      '1000000',   //  1.00 USDCx
+const publicBase = (req) => {
+  const env = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
+  if (env) return env.replace(/\/$/, '');
+  const proto = req.headers['x-forwarded-proto'] || 'http';
+  return `${proto}://${req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`}`;
 };
 
-const VALID_SKILL_IDS = new Set(Object.keys(SKILL_PRICES));
+const CONSENT = { type: 'boolean', description: 'Must be true: you confirm the target is yourself or someone who authorized this scan, and you accept /terms' };
 
-// ── x402 helpers ─────────────────────────────────────────────────────────────
+// ── Paid skills ──────────────────────────────────────────────────────────────
+const SKILLS = {
+  'metadata-audit': {
+    path: '/skills/metadata-audit', priceUsd: 0.05,
+    description: 'Privacy audit of a web page: leaky HTTP headers, meta tags, HTML comments, third-party trackers and resources, with a risk rating and recommendations.',
+    bodySchema: { type: 'object', properties: { url: { type: 'string', description: 'Absolute http(s) URL to audit' } }, required: ['url'] },
+    inputExample: { url: 'https://example.com' },
+    outputExample: { skill: 'metadata-audit', result: { overallRisk: 'low', findings: [] } },
+    async run(body) {
+      const url = sanitizeString(body.url, 2048);
+      if (!url || !isValidHttpUrl(url)) return { status: 400, body: { error: 'url must be an absolute HTTP/HTTPS URL' } };
+      return { status: 200, body: { skill: 'metadata-audit', result: await MetadataAgent.audit(url) } };
+    },
+  },
+  'threat-scan': {
+    path: '/skills/threat-scan', priceUsd: 0.10, requiresConsent: true,
+    description: "Searches the public web (DuckDuckGo) for a person's name and flags results exposing PII (phone, email, address keywords). For self-assessment or authorized use only.",
+    bodySchema: { type: 'object', properties: { fullName: { type: 'string', description: 'Full name to scan' }, consent: CONSENT }, required: ['fullName', 'consent'] },
+    inputExample: { fullName: 'Jane Example', consent: true },
+    outputExample: { skill: 'threat-scan', result: [{ title: '...', link: 'https://...', threatLevel: 'high', reasons: ['email'] }] },
+    async run(body) {
+      const fullName = sanitizeString(body.fullName);
+      if (!fullName) return { status: 400, body: { error: 'fullName is required' } };
+      return { status: 200, body: { skill: 'threat-scan', result: await SearchAgent.run({ fullName }) } };
+    },
+  },
+  'opsec-score': {
+    path: '/skills/opsec-score', priceUsd: 0.25, requiresConsent: true,
+    description: 'Multi-vector OPSEC exposure score (0-100) for a name, handle and/or email from public web search results, with prioritized recommendations. For self-assessment or authorized use only.',
+    bodySchema: { type: 'object', properties: { fullName: { type: 'string' }, handle: { type: 'string' }, email: { type: 'string' }, consent: CONSENT }, required: ['consent'] },
+    inputExample: { handle: 'janeexample', consent: true },
+    outputExample: { skill: 'opsec-score', result: { score: 42, riskLevel: 'medium', vectors: {} } },
+    async run(body) {
+      const target = {};
+      if (body.fullName) target.fullName = sanitizeString(body.fullName);
+      if (body.handle) target.handle = sanitizeString(body.handle);
+      if (body.email) {
+        const e = sanitizeString(body.email);
+        if (!isValidEmail(e)) return { status: 400, body: { error: 'Invalid email address' } };
+        target.email = e;
+      }
+      if (!target.fullName && !target.handle && !target.email) return { status: 400, body: { error: 'At least one of fullName, handle, or email is required' } };
+      return { status: 200, body: { skill: 'opsec-score', result: await OpsecAgent.assess(target) } };
+    },
+  },
+};
 
-function buildPaymentRequired(skillId, resourcePath) {
-  if (!PAYMENT_RECEIVER) {
-    throw new Error(
-      'PAYMENT_RECEIVER_ADDRESS (or SOVEREIGN_AGENT_ADDRESS/PHANTOM_OPERATOR_ADDRESS) must be set in .env'
-    );
-  }
-  return {
-    x402Version: 1,
-    accepts: [{
-      scheme:            'exact',
-      network:           'base-mainnet',
-      maxAmountRequired: SKILL_PRICES[skillId] || '1000000',
-      resource:          resourcePath,
-      description:
-        manifest.skills.find(s => s.id === skillId)?.description || skillId,
-      mimeType:          'application/json',
-      payTo:             PAYMENT_RECEIVER,
-      maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
-      asset:             PAYMENT_TOKEN_ADDRESS,
-      extra: { name: 'USD Coin', version: '2' },
-    }],
-    error: 'Payment required to access this skill.',
-  };
-}
+const DISABLED = {
+  'breach-check': 'Disabled: email breach lookup requires a paid HaveIBeenPwned API key.',
+  'data-removal': 'Disabled: opt-out submission is not implemented yet (previous version only returned a stub).',
+  'full-privacy-sweep': 'Disabled: requires a funded wallet private key and Superfluid streaming.',
+};
 
-/**
- * Legacy x402/EVM payment validation.
- * This is your existing logic extracted under a more explicit name.
- */
-async function validatePaymentX402(xPaymentHeader, skillId, resourcePath) {
-  if (!xPaymentHeader) {
-    return { valid: false, error: 'Missing X-PAYMENT header' };
-  }
-
-  let proof;
-  try {
-    proof = JSON.parse(Buffer.from(xPaymentHeader, 'base64').toString('utf8'));
-  } catch {
-    return {
-      valid: false,
-      error: 'X-PAYMENT header is not valid base64-encoded JSON',
-    };
-  }
-
-  const { payload, signature } = proof;
-  if (!payload || !signature) {
-    return { valid: false, error: 'X-PAYMENT proof missing payload or signature' };
-  }
-
-  const inner = payload.payload || {};
-
-  if (inner.resource && inner.resource !== resourcePath) {
-    return {
-      valid: false,
-      error: `Resource mismatch: expected ${resourcePath}`,
-    };
-  }
-  if (inner.expiresAt && Date.now() / 1000 > inner.expiresAt) {
-    return { valid: false, error: 'Payment proof has expired' };
-  }
-
-  const required = BigInt(SKILL_PRICES[skillId] || '1000000');
-  const provided = BigInt(inner.amount || '0');
-  if (provided < required) {
-    return {
-      valid: false,
-      error: `Insufficient payment: required ${required}, provided ${provided}`,
-    };
-  }
-
-  if (inner.asset && inner.asset.toLowerCase() !== PAYMENT_TOKEN_ADDRESS.toLowerCase()) {
-    return {
-      valid: false,
-      error: `Wrong payment token: expected ${PAYMENT_TOKEN_ADDRESS}`,
-    };
-  }
-
-  try {
-    const payerAddress = ethers.utils.verifyMessage(
-      JSON.stringify(payload),
-      signature
-    );
-    return { valid: true, payerAddress };
-  } catch (err) {
-    return { valid: false, error: 'Signature verification failed' };
-  }
-}
-
-/**
- * Monero payment validation stub.
- *
- * This is where you will later integrate with a separate Monero bridge service
- * that talks to monerod/monero-wallet-rpc and returns signed payment proofs.
- *
- * Expected header usage:
- *   X-PAYMENT-METHOD: monero
- *   X-PAYMENT: base64-encoded JSON like:
- *     { invoiceId, proof, signature }
- */
-async function validatePaymentMonero(xPaymentHeader, skillId, resourcePath) {
-  if (!xPaymentHeader) {
-    return { valid: false, error: 'Missing X-PAYMENT header for Monero' };
-  }
-
-  // TODO: Implement actual integration with your Monero bridge service.
-  // For now we always fail with a clear message so callers know this path
-  // is not production-ready yet.
-  return {
-    valid: false,
-    error: 'Monero payment method not yet implemented on this deployment',
-  };
-}
-
-/**
- * Unified payment validator.
- *
- * Chooses between x402 (Base / EVM) and Monero based on the X-PAYMENT-METHOD
- * header. Defaults to x402 for backward compatibility.
- *
- *   X-PAYMENT-METHOD: x402    → validatePaymentX402
- *   X-PAYMENT-METHOD: monero  → validatePaymentMonero
- */
-async function validateAnyPayment(req, skillId, resourcePath) {
-  const methodHeader = req.headers['x-payment-method'];
-  const method = (methodHeader || 'x402').toLowerCase();
-  const xPaymentHeader = req.headers['x-payment'];
-
-  if (method === 'x402') {
-    return validatePaymentX402(xPaymentHeader, skillId, resourcePath);
-  }
-
-  if (method === 'monero') {
-    return validatePaymentMonero(xPaymentHeader, skillId, resourcePath);
-  }
-
-  return {
-    valid: false,
-    error: `Unsupported payment method: ${method}`,
-  };
-}
-
-// ── Middleware helpers ────────────────────────────────────────────────────────
-
-function sendJson(res, status, body) {
-  const json = JSON.stringify(body, null, 2);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function send(res, status, body, headers = {}) {
+  const isText = typeof body === 'string';
+  const data = isText ? body : JSON.stringify(body, null, 2);
   res.writeHead(status, {
-    'Content-Type':   'application/json',
-    'Content-Length': Buffer.byteLength(json),
+    'Content-Type': isText ? 'text/plain; charset=utf-8' : 'application/json',
+    'Content-Length': Buffer.byteLength(data),
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE',
+    ...headers,
   });
-  res.end(json);
+  res.end(data);
 }
 
-async function readBody(req) {
+function readBody(req) {
   return new Promise((resolve, reject) => {
-    const chunks = [];
-    let totalBytes = 0;
-    req.on('data', chunk => {
-      totalBytes += chunk.length;
-      if (totalBytes > MAX_BODY_BYTES) {
-        req.destroy();
-        return reject(
-          new Error(`Request body exceeds ${MAX_BODY_BYTES} bytes`)
-        );
-      }
-      chunks.push(chunk);
+    const chunks = []; let total = 0;
+    req.on('data', (c) => {
+      total += c.length;
+      if (total > MAX_BODY_BYTES) { req.destroy(); return reject(new Error(`Request body exceeds ${MAX_BODY_BYTES} bytes`)); }
+      chunks.push(c);
     });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
-      } catch {
-        reject(new Error('Invalid JSON body'));
-      }
-    });
+    req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { reject(new Error('Invalid JSON body')); } });
     req.on('error', reject);
   });
 }
 
-function getClientIp(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-         req.socket.remoteAddress ||
-         'unknown';
+const clientIp = (req) => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+
+function catalog(base) {
+  return {
+    paid: Object.entries(SKILLS).map(([id, s]) => ({
+      id, method: 'POST', url: base + s.path, priceUsd: s.priceUsd, description: s.description,
+      body: s.bodySchema, requiresConsent: !!s.requiresConsent,
+    })),
+    disabled: DISABLED,
+    payment: { protocol: 'x402 v2', scheme: 'exact', network: x402.NETWORK, asset: x402.USDC_BASE, payTo: x402.PAY_TO, facilitator: x402.FACILITATOR },
+    terms: base + '/terms',
+  };
 }
 
-// ── Route handlers ───────────────────────────────────────────────────────────
-
-async function handleManifest(req, res) {
-  sendJson(res, 200, manifest);
+function llms(base) {
+  return [
+    '# PhantomOperator',
+    '',
+    '> Privacy and OPSEC agent. Audits web pages for metadata leaks and scores public-web PII exposure for yourself (or someone who authorized you). Pay per call via x402 (USDC on Base mainnet, payTo normancomics.eth). See terms before use.',
+    '',
+    '## Free',
+    `- [Skill catalog](${base}/skills)`,
+    `- [Agent manifest](${base}/manifest)`,
+    `- [Terms of use](${base}/terms)`,
+    `- [x402 resources](${base}/.well-known/x402)`,
+    '',
+    '## Paid (x402 v2, exact, eip155:8453 USDC; POST JSON)',
+    ...Object.values(SKILLS).map((s) => `- [POST ${s.path}](${base}${s.path}) $${s.priceUsd.toFixed(2)}: ${s.description}`),
+    '',
+    'Unpaid requests return HTTP 402 with a PAYMENT-REQUIRED header. Pay with any x402 client (PAYMENT-SIGNATURE or X-PAYMENT header). Errors and invalid input are not charged. threat-scan and opsec-score require "consent": true.',
+    '',
+  ].join('\n');
 }
 
-async function handleHealth(req, res) {
-  sendJson(res, 200, {
-    status:  'ok',
-    agent:   manifest.name || 'PhantomOperator',
-    version: manifest.version,
-  });
-}
-
-/**
- * Main handler for all paid skills.
- * Uses validateAnyPayment to support x402 and (future) Monero.
- */
-async function handlePaidSkill(req, res, skillId) {
-  const resourcePath = `/skills/${skillId}`;
-
-  // x402 / Monero gate
-  const { valid, error: paymentError } = await validateAnyPayment(
-    req,
-    skillId,
-    resourcePath
-  );
-  if (!valid) {
-    res.setHeader(
-      'X-PAYMENT-RESPONSE',
-      JSON.stringify({ status: 'payment-required', error: paymentError })
-    );
-    return sendJson(res, 402, buildPaymentRequired(skillId, resourcePath));
-  }
-
+async function handlePaid(req, res, id) {
+  const skill = SKILLS[id];
+  const base = publicBase(req);
   let body;
-  try {
-    body = await readBody(req);
-  } catch (err) {
-    return sendJson(res, 400, { error: err.message });
+  try { body = await readBody(req); } catch (e) { return send(res, 400, { error: e.message }); }
+
+  // Validate cheap preconditions before asking for payment so nobody pays for a rejected request.
+  if (skill.requiresConsent && body && Object.keys(body).length && body.consent !== true) {
+    return send(res, 400, { error: 'consent must be true (target is yourself or authorized you; you accept the terms)', terms: base + '/terms' });
   }
 
-  try {
-    let result;
-
-    if (skillId === 'threat-scan') {
-      const fullName = sanitizeString(body.fullName);
-      if (!fullName) {
-        return sendJson(res, 400, { error: 'fullName is required' });
-      }
-      result = await SearchAgent.run({ fullName });
-
-    } else if (skillId === 'data-removal') {
-      const threatUrl = sanitizeString(body.threatUrl);
-      if (!threatUrl) {
-        return sendJson(res, 400, { error: 'threatUrl is required' });
-      }
-      result = await BrokerAgent.removeThreat({ link: threatUrl, ...body });
-
-    } else if (skillId === 'full-privacy-sweep') {
-      const fullName = sanitizeString(body.fullName);
-      if (!fullName) {
-        return sendJson(res, 400, { error: 'fullName is required' });
-      }
-
-      // Use OrchestratorOperator as the core coordinator for sweeps.
-      const operator = new OrchestratorOperator();
-      await operator.startDataRemovalTask({
-        fullName,
-        walletAddress: sanitizeString(body.walletAddress) || PAYMENT_RECEIVER,
-        flowRate:      sanitizeString(body.flowRate) ||
-                       process.env.FLOW_RATE ||
-                       '385802469135802',
-      });
-
-      result = {
-        status:  'sweep-complete',
-        message: 'Full privacy sweep finished.',
-      };
-
-    } else if (skillId === 'opsec-score') {
-      const target = {};
-      if (body.fullName) target.fullName = sanitizeString(body.fullName);
-      if (body.handle)   target.handle   = sanitizeString(body.handle);
-      if (body.email)    target.email    = sanitizeString(body.email);
-      if (!target.fullName && !target.handle && !target.email) {
-        return sendJson(res, 400, {
-          error: 'At least one of fullName, handle, or email is required',
-        });
-      }
-      result = await OpsecAgent.assess(target);
-
-    } else if (skillId === 'breach-check') {
-      const email    = sanitizeString(body.email);
-      const password = typeof body.password === 'string'
-        ? body.password
-        : null;
-
-      if (!email && !password) {
-        return sendJson(res, 400, {
-          error: 'email or password is required',
-        });
-      }
-
-      result = {};
-
-      if (email) {
-        if (!isValidEmail(email)) {
-          return sendJson(res, 400, { error: 'Invalid email address' });
-        }
-        result.emailReport = await BreachAgent.getBreachReport(email);
-      }
-      if (password) {
-        result.passwordCheck = await BreachAgent.checkPassword(password);
-      }
-
-    } else if (skillId === 'metadata-audit') {
-      const url = sanitizeString(body.url, 2048);
-      if (!url) {
-        return sendJson(res, 400, { error: 'url is required' });
-      }
-      if (!isValidHttpUrl(url)) {
-        return sendJson(res, 400, {
-          error: 'url must be an absolute HTTP/HTTPS URL',
-        });
-      }
-      result = await MetadataAgent.audit(url);
-
-    } else {
-      return sendJson(res, 404, { error: 'Unknown skill' });
-    }
-
-    res.setHeader(
-      'X-PAYMENT-RESPONSE',
-      JSON.stringify({ status: 'settled' })
-    );
-    sendJson(res, 200, { skill: skillId, result });
-
-  } catch (err) {
-    console.error(`Skill error [${skillId}]:`, err.message);
-    const message = IS_PRODUCTION ? 'An internal error occurred' : err.message;
-    sendJson(res, 500, { error: message });
+  const v = await x402.verify(req, skill, base);
+  if (!v.ok) return send(res, v.status, v.body, v.headers);
+  if (skill.requiresConsent && body.consent !== true) {
+    return send(res, 400, { error: 'consent must be true', terms: base + '/terms' }); // not charged
   }
+
+  let out;
+  try { out = await skill.run(body); }
+  catch (err) {
+    console.error(`Skill error [${id}]:`, err.message);
+    return send(res, 500, { error: IS_PRODUCTION ? 'An internal error occurred' : err.message }); // not charged
+  }
+  if (out.status >= 400) return send(res, out.status, out.body); // not charged
+
+  const s = await x402.settle(v.payload, skill);
+  if (!s.ok) return send(res, s.status, s.body);
+  send(res, 200, out.body, s.headers);
 }
 
 // ── HTTP server ──────────────────────────────────────────────────────────────
-
 const server = http.createServer(async (req, res) => {
-  // Security headers on every response
   setSecurityHeaders(res);
-
-  const url      = req.url.split('?')[0];
-  const clientIp = getClientIp(req);
+  const url = req.url.split('?')[0];
+  const ip = clientIp(req);
+  const base = publicBase(req);
 
   try {
-    // Public endpoints — higher rate limit
-    if (req.method === 'GET' && (url === '/manifest' || url === '/health')) {
-      const rl = checkRateLimit(clientIp, RATE_LIMIT_PUBLIC);
-      if (!rl.allowed) {
-        res.setHeader('Retry-After', String(rl.retryAfter));
-        return sendJson(res, 429, {
-          error:      'Too many requests',
-          retryAfter: rl.retryAfter,
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' });
+      return res.end();
+    }
+    if (req.method === 'GET') {
+      const rl = checkRateLimit(ip, RATE_LIMIT_PUBLIC);
+      if (!rl.allowed) return send(res, 429, { error: 'Too many requests', retryAfter: rl.retryAfter }, { 'Retry-After': String(rl.retryAfter) });
+      switch (url) {
+        case '/': return send(res, 200, { service: 'PhantomOperator', description: manifest.description, ...catalog(base), discovery: { llms: base + '/llms.txt', x402: base + '/.well-known/x402', manifest: base + '/manifest' } });
+        case '/health': return send(res, 200, { status: 'ok', agent: manifest.name, version: manifest.version });
+        case '/manifest': return send(res, 200, manifest);
+        case '/skills': return send(res, 200, catalog(base));
+        case '/terms': return send(res, 200, TERMS);
+        case '/llms.txt': return send(res, 200, llms(base));
+        case '/.well-known/x402': return send(res, 200, {
+          x402Version: 2, facilitator: x402.FACILITATOR, network: x402.NETWORK, asset: x402.USDC_BASE, payTo: x402.PAY_TO,
+          resources: Object.values(SKILLS).map((s) => ({ resource: base + s.path, method: 'POST', description: s.description, priceUsd: s.priceUsd, accepts: [x402.requirements(s)] })),
         });
       }
-      if (url === '/manifest') return await handleManifest(req, res);
-      return await handleHealth(req, res);
     }
 
-    // Paid skill endpoints — stricter rate limit
     if (req.method === 'POST' && url.startsWith('/skills/')) {
-      const skillId = url.slice('/skills/'.length);
-      if (!VALID_SKILL_IDS.has(skillId)) {
-        return sendJson(res, 404, { error: 'Unknown skill' });
-      }
-      const rl = checkRateLimit(clientIp, RATE_LIMIT_PAID);
-      if (!rl.allowed) {
-        res.setHeader('Retry-After', String(rl.retryAfter));
-        return sendJson(res, 429, {
-          error:      'Too many requests',
-          retryAfter: rl.retryAfter,
-        });
-      }
-      return await handlePaidSkill(req, res, skillId);
+      const id = url.slice('/skills/'.length);
+      if (DISABLED[id]) return send(res, 410, { error: DISABLED[id] });
+      if (!SKILLS[id]) return send(res, 404, { error: 'Unknown skill', available: Object.keys(SKILLS) });
+      const rl = checkRateLimit(ip, RATE_LIMIT_PAID);
+      if (!rl.allowed) return send(res, 429, { error: 'Too many requests', retryAfter: rl.retryAfter }, { 'Retry-After': String(rl.retryAfter) });
+      return await handlePaid(req, res, id);
     }
 
-    sendJson(res, 404, {
-      error: 'Not found',
-      hint:  'Available: GET /manifest, GET /health, POST /skills/{skill-id}',
-    });
+    send(res, 404, { error: 'Not found', hint: 'See GET / for available endpoints' });
   } catch (err) {
     console.error('Unhandled error:', err.message);
-    sendJson(res, 500, { error: 'Internal server error' });
+    send(res, 500, { error: 'Internal server error' });
   }
 });
 
 server.listen(PORT, () => {
-  console.log(`PhantomOperator server running on port ${PORT}`);
-  console.log(`  GET  http://localhost:${PORT}/health`);
-  console.log(`  GET  http://localhost:${PORT}/manifest`);
-  for (const [skillId, price] of Object.entries(SKILL_PRICES)) {
-    console.log(
-      `  POST http://localhost:${PORT}/skills/${skillId}  (${price} USDCx)`
-    );
-  }
-  console.log('');
-  console.log('x402 payment token:', PAYMENT_TOKEN_ADDRESS);
-  console.log(
-    'Payment receiver:  ',
-    PAYMENT_RECEIVER ||
-      '(NOT SET — set PAYMENT_RECEIVER_ADDRESS or PHANTOM_OPERATOR_ADDRESS in .env)'
-  );
-  console.log('Chain ID:          ', CHAIN_ID);
+  console.log(`PhantomOperator listening on :${PORT}`);
+  for (const s of Object.values(SKILLS)) console.log(`  POST ${s.path}  $${s.priceUsd.toFixed(2)} USDC (x402, Base)`);
+  console.log(`  payTo ${x402.PAY_TO} via ${x402.FACILITATOR}`);
 });
-
-module.exports = server;
