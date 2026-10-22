@@ -222,7 +222,7 @@ Planned MCP tools (examples):
 - `phantom_breach_check`
 - `phantom_metadata_audit`
 
-The MCP server is planned (no `/mcp/` manifests are shipped yet). Tools will map to:
+Tool definitions live in [`mcp/tools.json`](mcp/tools.json) (HTTP-backed; a native MCP transport is still planned). Tools map to:
 
 - HTTP endpoints (e.g. `/skills/threat-scan`)
 - JSON parameter/response schemas
@@ -239,7 +239,16 @@ PhantomOperator is built to integrate with:
 - **8004scan.io** (autonomous agent explorer)
 - Other agent registries.
 
-Registry listings are generated from [`agent-manifest.json`](agent-manifest.json) (see `npm run register` and `npm run list-bazaar`); the server also publishes it live at the URLs below.
+Registry manifests live under [`registry-manifests/`](registry-manifests):
+
+```text
+registry-manifests/
+  cryptoskill.json
+  cdp-bazaar.json
+  8004scan.json
+```
+
+They are derived from [`agent-manifest.json`](agent-manifest.json) and use the live base URL, Base chain, token and payment receiver. `npm run register` and `npm run list-bazaar` use the manifest directly; the server also publishes it at the URLs below.
 
 Your deployment just needs to expose:
 

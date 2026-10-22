@@ -1,0 +1,129 @@
+{
+  "name": "PhantomOperator",
+  "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
+  "maintainer": "normancomics",
+  "baseUrl": "https://phantom-operator.onrender.com",
+  "manifestUrl": "https://phantom-operator.onrender.com/manifest",
+  "agentCard": "https://phantom-operator.onrender.com/.well-known/agent.json",
+  "openapi": "https://phantom-operator.onrender.com/openapi.json",
+  "website": "https://github.com/normancomics/PhantomOperator",
+  "skills": [
+    {
+      "id": "threat-scan",
+      "method": "POST",
+      "path": "/skills/threat-scan",
+      "price": "1000000",
+      "inputs": [
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Full name of the person to scan for"
+        }
+      ]
+    },
+    {
+      "id": "data-removal",
+      "method": "POST",
+      "path": "/skills/data-removal",
+      "price": "5000000",
+      "inputs": [
+        {
+          "name": "threatUrl",
+          "type": "string",
+          "description": "URL of the page containing the PII to remove"
+        },
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Full name of the person requesting removal"
+        }
+      ]
+    },
+    {
+      "id": "opsec-score",
+      "method": "POST",
+      "path": "/skills/opsec-score",
+      "price": "5000000",
+      "inputs": [
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Full legal name of the target (optional if handle or email provided)"
+        },
+        {
+          "name": "handle",
+          "type": "string",
+          "description": "Online pseudonym / username to assess (optional)"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "description": "Email address to include in the assessment (optional)"
+        }
+      ]
+    },
+    {
+      "id": "breach-check",
+      "method": "POST",
+      "path": "/skills/breach-check",
+      "price": "2000000",
+      "inputs": [
+        {
+          "name": "email",
+          "type": "string",
+          "description": "Email address to check against known breach databases (optional)"
+        },
+        {
+          "name": "password",
+          "type": "string",
+          "description": "Plaintext password to check via k-anonymity (optional \u2014 hash prefix only transmitted)"
+        }
+      ]
+    },
+    {
+      "id": "metadata-audit",
+      "method": "POST",
+      "path": "/skills/metadata-audit",
+      "price": "1000000",
+      "inputs": [
+        {
+          "name": "url",
+          "type": "string",
+          "description": "Absolute HTTP/HTTPS URL to audit"
+        }
+      ]
+    },
+    {
+      "id": "full-privacy-sweep",
+      "method": "POST",
+      "path": "/skills/full-privacy-sweep",
+      "price": "10000000",
+      "inputs": [
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Full name of the person"
+        },
+        {
+          "name": "walletAddress",
+          "type": "string",
+          "description": "Wallet address to stream payment from"
+        },
+        {
+          "name": "flowRate",
+          "type": "string",
+          "description": "Superfluid flow rate in wei/second"
+        }
+      ]
+    }
+  ],
+  "payment": {
+    "chain": "base",
+    "chainId": 8453,
+    "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+    "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+    "protocols": [
+      "x402"
+    ]
+  }
+}
