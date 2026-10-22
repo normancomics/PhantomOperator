@@ -17,6 +17,35 @@ Created by normancomics — normancomics.eth · normancomics.base.eth · normanc
 
 ---
 
+## Live Deployment & Addresses
+
+**Base URL:** https://phantom-operator.onrender.com
+
+| Resource | URL |
+|---|---|
+| Index | https://phantom-operator.onrender.com/ |
+| Health | https://phantom-operator.onrender.com/health |
+| Manifest | https://phantom-operator.onrender.com/manifest |
+| Agent card | https://phantom-operator.onrender.com/.well-known/agent.json |
+| x402 discovery | https://phantom-operator.onrender.com/.well-known/x402 |
+| OpenAPI | https://phantom-operator.onrender.com/openapi.json |
+| SKILL.md | https://phantom-operator.onrender.com/SKILL.md |
+| llms.txt | https://phantom-operator.onrender.com/llms.txt |
+| Source | https://github.com/normancomics/PhantomOperator |
+
+| Item | Value |
+|---|---|
+| Chain | Base mainnet (chain ID 8453) |
+| x402 payment receiver | `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6` |
+| Payment token (USDCx) | `0xD04383398dD2426297da660F9CCA3d439AF9ce1b` |
+| Agent / author address | `0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7` |
+| ERC-8004 Identity Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| ERC-8004 Reputation Registry | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+
+The deployed server must have `PAYMENT_RECEIVER_ADDRESS` set to the receiver above; verify with `.../.well-known/x402` (`payTo`).
+
+---
+
 ## Architecture Overview
 
 PhantomOperator is **not** a single agent. It is an **agentic framework** composed of cooperating operators and swarms.
@@ -114,7 +143,7 @@ PhantomOperator uses an x402-compatible payment middleware (HTTP 402 Payment Req
 See [`server.js`](server.js) for:
 
 - `SKILL_PRICES`
-- `validatePayment(...)`
+- `validateAnyPayment(...)`
 - x402 enforcement in `handlePaidSkill(...)`
 
 ### Monero (True Privacy Path)
@@ -193,7 +222,7 @@ Planned MCP tools (examples):
 - `phantom_breach_check`
 - `phantom_metadata_audit`
 
-MCP manifests and tool schemas live under `/mcp/` and map to:
+Tool definitions live in [`mcp/tools.json`](mcp/tools.json) (HTTP-backed; a native MCP transport is still planned). Tools map to:
 
 - HTTP endpoints (e.g. `/skills/threat-scan`)
 - JSON parameter/response schemas
@@ -210,49 +239,92 @@ PhantomOperator is built to integrate with:
 - **8004scan.io** (autonomous agent explorer)
 - Other agent registries.
 
-Registry manifests live under:
+Registry manifests live under [`registry-manifests/`](registry-manifests):
 
 ```text
-/registry-manifests
+registry-manifests/
   cryptoskill.json
   cdp-bazaar.json
   8004scan.json
 ```
 
-Each manifest defines:
-
-- Name, description, maintainer
-- Public base URL
-- List of skills, paths, and methods
-- Chain (Base), token address, and payment receiver
-- Optional Monero payment details.
+They are derived from [`agent-manifest.json`](agent-manifest.json) and use the live base URL, Base chain, token and payment receiver. `npm run register` and `npm run list-bazaar` use the manifest directly; the server also publishes it at the URLs below.
 
 Your deployment just needs to expose:
 
 - `GET /health`
-- `GET /manifest`
+- `GET /manifest` (also served at `/.well-known/agent.json`)
+
+For agent and LLM discovery it also serves `/openapi.json`, `/SKILL.md` and `/llms.txt`.
 
 and host at a stable public URL.
+
+### Getting listed
+
+1. Deploy publicly and set `PUBLIC_BASE_URL` (e.g. `https://phantom-operator.onrender.com`) so discovery documents carry the right URLs.
+2. Register on-chain identity (ERC-8004, shown on 8004scan.io): `npm run register`; point the agent's metadata at https://phantom-operator.onrender.com/.well-known/agent.json.
+3. List on the Coinbase CDP x402 Bazaar: `npm run list-bazaar` (needs `AGENT_SERVER_URL`, `CDP_API_KEY_NAME`, `CDP_API_KEY_PRIVATE_KEY`). The 402 response includes an `outputSchema` so facilitators can index each skill's inputs.
+4. Submit the base URL to other x402 directories and agent platforms (e.g. bankr.bot) by hand — they crawl `/openapi.json`, `/llms.txt` and `/.well-known/x402`.
+5. Add GitHub topics (`x402`, `ai-agent`, `privacy`, `opsec`, `erc-8004`, `mcp`) in the repository settings.
 
 ---
 
 ## HTTP API (Current)
 
-Public endpoints:
+Public endpoints (all GET, CORS-enabled, rate-limited):
 
-- `GET  /health`
-- `GET  /manifest`
+| Path | Description |
+|---|---|
+| `/` | JSON index of endpoints, prices and links |
+| `/health` | Liveness check |
+| `/manifest` | Agent manifest (`agent-manifest.json`) |
+| `/.well-known/agent.json` | Same manifest, at the well-known discovery path |
+| `/openapi.json` | OpenAPI 3.1 spec generated from `SKILL_PRICES` and the manifest, including the 402 response |
+| `/.well-known/x402` | x402 discovery document (receiver, asset, priced resources) |
+| `/robots.txt` | Crawler policy |
+| `/SKILL.md` | Skill description (`text/markdown`) |
+| `/llms.txt` | LLM-friendly site summary (`text/plain`) |
 
 Paid skill endpoints (x402 / Monero):
 
-- `POST /skills/threat-scan`
-- `POST /skills/data-removal`
-- `POST /skills/full-privacy-sweep`
-- `POST /skills/opsec-score`
-- `POST /skills/breach-check`
-- `POST /skills/metadata-audit`
+| Endpoint | Price (USDCx) |
+|---|---|
+| `POST /skills/threat-scan` | 1.00 |
+| `POST /skills/data-removal` | 5.00 |
+| `POST /skills/full-privacy-sweep` | 10.00 |
+| `POST /skills/opsec-score` | 5.00 |
+| `POST /skills/breach-check` | 2.00 |
+| `POST /skills/metadata-audit` | 1.00 |
+
+An unpaid call returns `402` with an x402 descriptor. If no payment receiver is configured, paid endpoints return `503` (`Payment receiver not configured`). `OPTIONS` preflight returns `204`; allowed headers are `X-PAYMENT`, `X-PAYMENT-METHOD` and `Content-Type`.
+
+```bash
+curl -i -X POST https://phantom-operator.onrender.com/skills/opsec-score \
+  -H "Content-Type: application/json" -d '{}'
+# HTTP/1.1 402 Payment Required
+```
 
 See [`server.js`](server.js) for expected request bodies and validation.
+
+---
+
+## Running Locally & Deploying
+
+```bash
+npm install
+cp .env.example .env     # set PAYMENT_RECEIVER_ADDRESS at minimum
+npm start                # listens on 0.0.0.0:$PORT (default 3000)
+npm test                 # runs the workflow demo plus HTTP server checks
+```
+
+Key environment variables:
+
+- `PAYMENT_RECEIVER_ADDRESS` — required for paid skills (falls back to `SOVEREIGN_AGENT_ADDRESS` / `PHANTOM_OPERATOR_ADDRESS`). Without it the server starts with a warning and paid endpoints return 503.
+- `PORT` — HTTP port (Render sets this automatically).
+- `PUBLIC_BASE_URL` — optional; base URL used in `/` and `/openapi.json`.
+- `PAYMENT_TOKEN_ADDRESS`, `CHAIN_ID` — optional overrides (default USDCx on Base, 8453).
+
+The server binds to `0.0.0.0`, so it runs on Render as a plain Node web service (`npm install` build, `npm start` start command).
 
 ---
 

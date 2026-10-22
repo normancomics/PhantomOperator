@@ -23,6 +23,8 @@
  */
 require('dotenv').config();
 const http = require('http');
+const fs   = require('fs');
+const path = require('path');
 const { ethers } = require('ethers');
 
 const SearchAgent      = require('./agents/SearchAgent');
@@ -92,6 +94,17 @@ function buildPaymentRequired(skillId, resourcePath) {
       payTo:             PAYMENT_RECEIVER,
       maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
       asset:             PAYMENT_TOKEN_ADDRESS,
+      outputSchema: {
+        input: {
+          type:   'http',
+          method: 'POST',
+          bodyType: 'json',
+          bodyFields: Object.fromEntries(
+            (manifest.skills.find(s => s.id === skillId)?.inputs || [])
+              .map(i => [i.name, { type: i.type || 'string', description: i.description || '' }])
+          ),
+        },
+      },
       extra: { name: 'USD Coin', version: '2' },
     }],
     error: 'Payment required to access this skill.',
@@ -259,7 +272,155 @@ function getClientIp(req) {
 // ── Route handlers ───────────────────────────────────────────────────────────
 
 async function handleManifest(req, res) {
-  sendJson(res, 200, manifest);
+  const base = getBaseUrl(req);
+  sendJson(res, 200, {
+    ...manifest,
+    url: base,
+    endpoints: {
+      openapi: `${base}/openapi.json`,
+      skill:   `${base}/SKILL.md`,
+      llms:    `${base}/llms.txt`,
+      x402:    `${base}/.well-known/x402`,
+    },
+    tags: ['privacy', 'opsec', 'osint', 'x402', 'base', 'usdc', 'data-removal', 'breach-check'],
+  });
+}
+
+async function handleX402Discovery(req, res) {
+  const base = getBaseUrl(req);
+  sendJson(res, 200, {
+    x402Version: 1,
+    name:        manifest.name,
+    description: manifest.description,
+    payTo:       PAYMENT_RECEIVER || null,
+    network:     'base-mainnet',
+    chainId:     CHAIN_ID,
+    asset:       PAYMENT_TOKEN_ADDRESS,
+    resources:   Object.entries(SKILL_PRICES).map(([id, price]) => ({
+      resource:          `${base}/skills/${id}`,
+      method:            'POST',
+      scheme:            'exact',
+      maxAmountRequired: price,
+    })),
+  });
+}
+
+function handleRobots(req, res) {
+  sendText(res, 200, 'text/plain; charset=utf-8',
+    `User-agent: *\nAllow: /\n\nSitemap: ${getBaseUrl(req)}/llms.txt\n`);
+}
+
+function sendText(res, status, contentType, text) {
+  res.writeHead(status, {
+    'Content-Type':   contentType,
+    'Content-Length': Buffer.byteLength(text),
+  });
+  res.end(text);
+}
+
+function getBaseUrl(req) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/+$/, '');
+  const proto = (req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+  const host  = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
+  return `${proto}://${host}`;
+}
+
+async function handleIndex(req, res) {
+  const base = getBaseUrl(req);
+  sendJson(res, 200, {
+    name:        manifest.name || 'PhantomOperator',
+    version:     manifest.version,
+    description: manifest.description,
+    links: {
+      health:   `${base}/health`,
+      manifest: `${base}/manifest`,
+      agent:    `${base}/.well-known/agent.json`,
+      openapi:  `${base}/openapi.json`,
+      skill:    `${base}/SKILL.md`,
+      llms:     `${base}/llms.txt`,
+      x402:     `${base}/.well-known/x402`,
+      source:   manifest.website,
+    },
+    skills: Object.entries(SKILL_PRICES).map(([id, price]) => ({
+      id,
+      method:  'POST',
+      url:     `${base}/skills/${id}`,
+      price,
+      payment: 'x402 (USDCx on Base); unpaid calls return HTTP 402',
+    })),
+  });
+}
+
+function sendStaticFile(res, file, contentType) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(__dirname, file), 'utf8');
+  } catch {
+    return sendJson(res, 404, { error: 'Not found' });
+  }
+  sendText(res, 200, contentType, text);
+}
+
+function buildOpenApi(req) {
+  const paths = {};
+  for (const [id, price] of Object.entries(SKILL_PRICES)) {
+    const skill = (manifest.skills || []).find(s => s.id === id) || {};
+    const properties = {};
+    for (const input of skill.inputs || []) {
+      properties[input.name] = {
+        type:        input.type || 'string',
+        description: input.description || '',
+      };
+    }
+    paths[`/skills/${id}`] = {
+      post: {
+        operationId: id,
+        summary:     skill.name || id,
+        description: `${skill.description || id} Price: ${price} USDCx base units (6 decimals).`,
+        parameters: [
+          { name: 'X-PAYMENT', in: 'header', required: false, schema: { type: 'string' },
+            description: 'Base64-encoded x402 payment proof' },
+          { name: 'X-PAYMENT-METHOD', in: 'header', required: false,
+            schema: { type: 'string', enum: ['x402', 'monero'] } },
+        ],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', properties } } },
+        },
+        responses: {
+          200: { description: 'Skill result' },
+          400: { description: 'Invalid input' },
+          402: {
+            description: 'Payment required (x402 descriptor)',
+            content: { 'application/json': { schema: { type: 'object', properties: {
+              x402Version: { type: 'integer' },
+              accepts:     { type: 'array', items: { type: 'object' } },
+              error:       { type: 'string' },
+            } } } },
+          },
+          503: { description: 'Payment receiver not configured' },
+        },
+      },
+    };
+  }
+  paths['/health'] = {
+    get: { operationId: 'health', summary: 'Liveness check',
+           responses: { 200: { description: 'OK' } } },
+  };
+  paths['/manifest'] = {
+    get: { operationId: 'manifest', summary: 'Agent manifest',
+           responses: { 200: { description: 'Agent manifest JSON' } } },
+  };
+  return {
+    openapi: '3.1.0',
+    info: {
+      title:       manifest.name || 'PhantomOperator',
+      version:     manifest.version || '0.1.0',
+      description: manifest.description,
+    },
+    servers: [{ url: getBaseUrl(req) }],
+    paths,
+  };
 }
 
 async function handleHealth(req, res) {
@@ -288,7 +449,17 @@ async function handlePaidSkill(req, res, skillId) {
       'X-PAYMENT-RESPONSE',
       JSON.stringify({ status: 'payment-required', error: paymentError })
     );
-    return sendJson(res, 402, buildPaymentRequired(skillId, resourcePath));
+    let descriptor;
+    try {
+      descriptor = buildPaymentRequired(skillId, resourcePath);
+    } catch (err) {
+      console.error(`Payment configuration error [${skillId}]:`, err.message);
+      return sendJson(res, 503, {
+        error: 'Payment receiver not configured',
+        hint:  'Set PAYMENT_RECEIVER_ADDRESS',
+      });
+    }
+    return sendJson(res, 402, descriptor);
   }
 
   let body;
@@ -403,16 +574,31 @@ async function handlePaidSkill(req, res, skillId) {
 
 // ── HTTP server ──────────────────────────────────────────────────────────────
 
+const PUBLIC_ROUTES = new Set([
+  '/', '/health', '/manifest', '/.well-known/agent.json',
+  '/SKILL.md', '/llms.txt', '/openapi.json',
+  '/.well-known/x402', '/robots.txt',
+]);
+
 const server = http.createServer(async (req, res) => {
   // Security headers on every response
   setSecurityHeaders(res);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-PAYMENT, X-PAYMENT-METHOD, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'X-PAYMENT-RESPONSE');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
 
   const url      = req.url.split('?')[0];
   const clientIp = getClientIp(req);
 
   try {
     // Public endpoints — higher rate limit
-    if (req.method === 'GET' && (url === '/manifest' || url === '/health')) {
+    if (req.method === 'GET' && PUBLIC_ROUTES.has(url)) {
       const rl = checkRateLimit(clientIp, RATE_LIMIT_PUBLIC);
       if (!rl.allowed) {
         res.setHeader('Retry-After', String(rl.retryAfter));
@@ -421,7 +607,15 @@ const server = http.createServer(async (req, res) => {
           retryAfter: rl.retryAfter,
         });
       }
-      if (url === '/manifest') return await handleManifest(req, res);
+      if (url === '/manifest' || url === '/.well-known/agent.json') {
+        return await handleManifest(req, res);
+      }
+      if (url === '/.well-known/x402') return await handleX402Discovery(req, res);
+      if (url === '/robots.txt') return handleRobots(req, res);
+      if (url === '/') return await handleIndex(req, res);
+      if (url === '/SKILL.md') return sendStaticFile(res, 'SKILL.md', 'text/markdown; charset=utf-8');
+      if (url === '/llms.txt') return sendStaticFile(res, 'llms.txt', 'text/plain; charset=utf-8');
+      if (url === '/openapi.json') return sendJson(res, 200, buildOpenApi(req));
       return await handleHealth(req, res);
     }
 
@@ -444,7 +638,7 @@ const server = http.createServer(async (req, res) => {
 
     sendJson(res, 404, {
       error: 'Not found',
-      hint:  'Available: GET /manifest, GET /health, POST /skills/{skill-id}',
+      hint:  'Available: GET /, GET /manifest, GET /health, GET /openapi.json, POST /skills/{skill-id}',
     });
   } catch (err) {
     console.error('Unhandled error:', err.message);
@@ -452,7 +646,14 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+if (!PAYMENT_RECEIVER) {
+  console.warn(
+    'WARNING: no payment receiver configured. Set PAYMENT_RECEIVER_ADDRESS; ' +
+    'paid skills will return 503 until it is set.'
+  );
+}
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`PhantomOperator server running on port ${PORT}`);
   console.log(`  GET  http://localhost:${PORT}/health`);
   console.log(`  GET  http://localhost:${PORT}/manifest`);
