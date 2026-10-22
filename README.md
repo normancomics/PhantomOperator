@@ -1,5 +1,8 @@
 # PhantomOperator
 
+<p align="center"><img src="assets/phantom-operator-logo.png" alt="PhantomOperator logo" width="256"></p>
+
+
 Created by normancomics — normancomics.eth · normancomics.base.eth · normancomics.reserve.superfluid.eth · 0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7
 
 **PhantomOperator** is a **multi-operator privacy and OPSEC framework** for people who want to *vanish* from data brokers, minimize surveillance, and maintain stealth online.
@@ -26,7 +29,7 @@ Created by normancomics — normancomics.eth · normancomics.base.eth · normanc
 > | `POST /skills/threat-scan` `{fullName, consent:true}` | $0.10 | DuckDuckGo HTML search |
 > | `POST /skills/opsec-score` `{fullName?, handle?, email?, consent:true}` | $0.25 | DuckDuckGo HTML search |
 >
-> Payments are real **x402 v2** (`exact` scheme). They are made in plain **USDC on Base mainnet**, paid to `normancomics.eth` (`0x3d95D4A6DbaE0Cd0643a82b13A13b08921D6ADf7`), and settled through the keyless PayAI facilitator. A payment is settled only after a successful response. Invalid input and errors are not charged.
+> Payments are real **x402 v2** (`exact` scheme). They are made in plain **USDC on Base mainnet**, paid to `normancomics.eth` (`0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`), and settled through the keyless PayAI facilitator. A payment is settled only after a successful response. Invalid input and errors are not charged.
 >
 > **Free endpoints:** `/`, `/health`, `/manifest`, `/skills`, `/terms`, `/llms.txt`, `/.well-known/x402`.
 >
