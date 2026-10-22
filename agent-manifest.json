@@ -50,7 +50,7 @@
     {
       "id": "opsec-score",
       "name": "OPSEC Exposure Score",
-      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0\u2013100) with grade A\u2013F and prioritised remediation steps. Ideal for red teamers, PERSEC auditors, and privacy-first individuals.",
+      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0–100) with grade A–F and prioritised remediation steps. Ideal for red teamers, PERSEC auditors, and privacy-first individuals.",
       "version": "0.1.0",
       "inputs": [
         {
@@ -73,12 +73,12 @@
         {
           "name": "score",
           "type": "number",
-          "description": "Exposure score 0\u2013100 (higher = worse OPSEC)"
+          "description": "Exposure score 0–100 (higher = worse OPSEC)"
         },
         {
           "name": "grade",
           "type": "string",
-          "description": "Letter grade A\u2013F"
+          "description": "Letter grade A–F"
         },
         {
           "name": "breakdown",
@@ -170,12 +170,14 @@
     "scheme": "exact",
     "network": "eip155:8453",
     "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "payTo": "0x3d95D4A6DbaE0Cd0643a82b13A13b08921D6ADf7",
+    "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
     "facilitator": "https://facilitator.payai.network",
     "terms": "/terms"
   },
   "registries": {
     "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
-  }
+  },
+  "image": "https://phantom-operator.onrender.com/logo.png",
+  "logo": "https://phantom-operator.onrender.com/logo.png"
 }
