@@ -94,6 +94,17 @@ function buildPaymentRequired(skillId, resourcePath) {
       payTo:             PAYMENT_RECEIVER,
       maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
       asset:             PAYMENT_TOKEN_ADDRESS,
+      outputSchema: {
+        input: {
+          type:   'http',
+          method: 'POST',
+          bodyType: 'json',
+          bodyFields: Object.fromEntries(
+            (manifest.skills.find(s => s.id === skillId)?.inputs || [])
+              .map(i => [i.name, { type: i.type || 'string', description: i.description || '' }])
+          ),
+        },
+      },
       extra: { name: 'USD Coin', version: '2' },
     }],
     error: 'Payment required to access this skill.',
@@ -261,7 +272,42 @@ function getClientIp(req) {
 // ── Route handlers ───────────────────────────────────────────────────────────
 
 async function handleManifest(req, res) {
-  sendJson(res, 200, manifest);
+  const base = getBaseUrl(req);
+  sendJson(res, 200, {
+    ...manifest,
+    url: base,
+    endpoints: {
+      openapi: `${base}/openapi.json`,
+      skill:   `${base}/SKILL.md`,
+      llms:    `${base}/llms.txt`,
+      x402:    `${base}/.well-known/x402`,
+    },
+    tags: ['privacy', 'opsec', 'osint', 'x402', 'base', 'usdc', 'data-removal', 'breach-check'],
+  });
+}
+
+async function handleX402Discovery(req, res) {
+  const base = getBaseUrl(req);
+  sendJson(res, 200, {
+    x402Version: 1,
+    name:        manifest.name,
+    description: manifest.description,
+    payTo:       PAYMENT_RECEIVER || null,
+    network:     'base-mainnet',
+    chainId:     CHAIN_ID,
+    asset:       PAYMENT_TOKEN_ADDRESS,
+    resources:   Object.entries(SKILL_PRICES).map(([id, price]) => ({
+      resource:          `${base}/skills/${id}`,
+      method:            'POST',
+      scheme:            'exact',
+      maxAmountRequired: price,
+    })),
+  });
+}
+
+function handleRobots(req, res) {
+  sendText(res, 200, 'text/plain; charset=utf-8',
+    `User-agent: *\nAllow: /\n\nSitemap: ${getBaseUrl(req)}/llms.txt\n`);
 }
 
 function sendText(res, status, contentType, text) {
@@ -292,6 +338,7 @@ async function handleIndex(req, res) {
       openapi:  `${base}/openapi.json`,
       skill:    `${base}/SKILL.md`,
       llms:     `${base}/llms.txt`,
+      x402:     `${base}/.well-known/x402`,
       source:   manifest.website,
     },
     skills: Object.entries(SKILL_PRICES).map(([id, price]) => ({
@@ -530,6 +577,7 @@ async function handlePaidSkill(req, res, skillId) {
 const PUBLIC_ROUTES = new Set([
   '/', '/health', '/manifest', '/.well-known/agent.json',
   '/SKILL.md', '/llms.txt', '/openapi.json',
+  '/.well-known/x402', '/robots.txt',
 ]);
 
 const server = http.createServer(async (req, res) => {
@@ -562,6 +610,8 @@ const server = http.createServer(async (req, res) => {
       if (url === '/manifest' || url === '/.well-known/agent.json') {
         return await handleManifest(req, res);
       }
+      if (url === '/.well-known/x402') return await handleX402Discovery(req, res);
+      if (url === '/robots.txt') return handleRobots(req, res);
       if (url === '/') return await handleIndex(req, res);
       if (url === '/SKILL.md') return sendStaticFile(res, 'SKILL.md', 'text/markdown; charset=utf-8');
       if (url === '/llms.txt') return sendStaticFile(res, 'llms.txt', 'text/plain; charset=utf-8');

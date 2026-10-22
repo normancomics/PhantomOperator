@@ -48,6 +48,10 @@ async function runServerTests() {
     assert.ok(Array.isArray(JSON.parse(unpaid.body).accepts));
     const spec = JSON.parse((await request(34567, 'GET', '/openapi.json')).body);
     assert.ok(spec.openapi && spec.paths['/skills/opsec-score']);
+    const disc = JSON.parse((await request(34567, 'GET', '/.well-known/x402')).body);
+    assert.ok(disc.resources.length > 0 && disc.payTo === RECEIVER);
+    assert.strictEqual((await request(34567, 'GET', '/robots.txt')).status, 200);
+    assert.ok(JSON.parse(unpaid.body).accepts[0].outputSchema);
     assert.strictEqual((await request(34567, 'OPTIONS', '/skills/opsec-score')).status, 204);
   });
 

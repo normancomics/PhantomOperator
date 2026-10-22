@@ -236,6 +236,14 @@ For agent and LLM discovery it also serves `/openapi.json`, `/SKILL.md` and `/ll
 
 and host at a stable public URL.
 
+### Getting listed
+
+1. Deploy publicly and set `PUBLIC_BASE_URL` (e.g. `https://phantom-operator.onrender.com`) so discovery documents carry the right URLs.
+2. Register on-chain identity (ERC-8004, shown on 8004scan.io): `npm run register`; point the agent's metadata at `<base>/.well-known/agent.json`.
+3. List on the Coinbase CDP x402 Bazaar: `npm run list-bazaar` (needs `AGENT_SERVER_URL`, `CDP_API_KEY_NAME`, `CDP_API_KEY_PRIVATE_KEY`). The 402 response includes an `outputSchema` so facilitators can index each skill's inputs.
+4. Submit the base URL to other x402 directories and agent platforms (e.g. bankr.bot) by hand — they crawl `/openapi.json`, `/llms.txt` and `/.well-known/x402`.
+5. Add GitHub topics (`x402`, `ai-agent`, `privacy`, `opsec`, `erc-8004`, `mcp`) in the repository settings.
+
 ---
 
 ## HTTP API (Current)
@@ -249,6 +257,8 @@ Public endpoints (all GET, CORS-enabled, rate-limited):
 | `/manifest` | Agent manifest (`agent-manifest.json`) |
 | `/.well-known/agent.json` | Same manifest, at the well-known discovery path |
 | `/openapi.json` | OpenAPI 3.1 spec generated from `SKILL_PRICES` and the manifest, including the 402 response |
+| `/.well-known/x402` | x402 discovery document (receiver, asset, priced resources) |
+| `/robots.txt` | Crawler policy |
 | `/SKILL.md` | Skill description (`text/markdown`) |
 | `/llms.txt` | LLM-friendly site summary (`text/plain`) |
 
