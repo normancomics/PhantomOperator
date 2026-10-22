@@ -114,7 +114,7 @@ PhantomOperator uses an x402-compatible payment middleware (HTTP 402 Payment Req
 See [`server.js`](server.js) for:
 
 - `SKILL_PRICES`
-- `validatePayment(...)`
+- `validateAnyPayment(...)`
 - x402 enforcement in `handlePaidSkill(...)`
 
 ### Monero (True Privacy Path)
@@ -230,7 +230,9 @@ Each manifest defines:
 Your deployment just needs to expose:
 
 - `GET /health`
-- `GET /manifest`
+- `GET /manifest` (also served at `/.well-known/agent.json`)
+
+For agent and LLM discovery it also serves `/openapi.json`, `/SKILL.md` and `/llms.txt`.
 
 and host at a stable public URL.
 
@@ -238,21 +240,58 @@ and host at a stable public URL.
 
 ## HTTP API (Current)
 
-Public endpoints:
+Public endpoints (all GET, CORS-enabled, rate-limited):
 
-- `GET  /health`
-- `GET  /manifest`
+| Path | Description |
+|---|---|
+| `/` | JSON index of endpoints, prices and links |
+| `/health` | Liveness check |
+| `/manifest` | Agent manifest (`agent-manifest.json`) |
+| `/.well-known/agent.json` | Same manifest, at the well-known discovery path |
+| `/openapi.json` | OpenAPI 3.1 spec generated from `SKILL_PRICES` and the manifest, including the 402 response |
+| `/SKILL.md` | Skill description (`text/markdown`) |
+| `/llms.txt` | LLM-friendly site summary (`text/plain`) |
 
 Paid skill endpoints (x402 / Monero):
 
-- `POST /skills/threat-scan`
-- `POST /skills/data-removal`
-- `POST /skills/full-privacy-sweep`
-- `POST /skills/opsec-score`
-- `POST /skills/breach-check`
-- `POST /skills/metadata-audit`
+| Endpoint | Price (USDCx) |
+|---|---|
+| `POST /skills/threat-scan` | 1.00 |
+| `POST /skills/data-removal` | 5.00 |
+| `POST /skills/full-privacy-sweep` | 10.00 |
+| `POST /skills/opsec-score` | 5.00 |
+| `POST /skills/breach-check` | 2.00 |
+| `POST /skills/metadata-audit` | 1.00 |
+
+An unpaid call returns `402` with an x402 descriptor. If no payment receiver is configured, paid endpoints return `503` (`Payment receiver not configured`). `OPTIONS` preflight returns `204`; allowed headers are `X-PAYMENT`, `X-PAYMENT-METHOD` and `Content-Type`.
+
+```bash
+curl -i -X POST http://localhost:3000/skills/opsec-score \
+  -H "Content-Type: application/json" -d '{}'
+# HTTP/1.1 402 Payment Required
+```
 
 See [`server.js`](server.js) for expected request bodies and validation.
+
+---
+
+## Running Locally & Deploying
+
+```bash
+npm install
+cp .env.example .env     # set PAYMENT_RECEIVER_ADDRESS at minimum
+npm start                # listens on 0.0.0.0:$PORT (default 3000)
+npm test                 # runs the workflow demo plus HTTP server checks
+```
+
+Key environment variables:
+
+- `PAYMENT_RECEIVER_ADDRESS` — required for paid skills (falls back to `SOVEREIGN_AGENT_ADDRESS` / `PHANTOM_OPERATOR_ADDRESS`). Without it the server starts with a warning and paid endpoints return 503.
+- `PORT` — HTTP port (Render sets this automatically).
+- `PUBLIC_BASE_URL` — optional; base URL used in `/` and `/openapi.json`.
+- `PAYMENT_TOKEN_ADDRESS`, `CHAIN_ID` — optional overrides (default USDCx on Base, 8453).
+
+The server binds to `0.0.0.0`, so it runs on Render as a plain Node web service (`npm install` build, `npm start` start command).
 
 ---
 
