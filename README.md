@@ -17,6 +17,35 @@ Created by normancomics — normancomics.eth · normancomics.base.eth · normanc
 
 ---
 
+## Live Deployment & Addresses
+
+**Base URL:** https://phantom-operator.onrender.com
+
+| Resource | URL |
+|---|---|
+| Index | https://phantom-operator.onrender.com/ |
+| Health | https://phantom-operator.onrender.com/health |
+| Manifest | https://phantom-operator.onrender.com/manifest |
+| Agent card | https://phantom-operator.onrender.com/.well-known/agent.json |
+| x402 discovery | https://phantom-operator.onrender.com/.well-known/x402 |
+| OpenAPI | https://phantom-operator.onrender.com/openapi.json |
+| SKILL.md | https://phantom-operator.onrender.com/SKILL.md |
+| llms.txt | https://phantom-operator.onrender.com/llms.txt |
+| Source | https://github.com/normancomics/PhantomOperator |
+
+| Item | Value |
+|---|---|
+| Chain | Base mainnet (chain ID 8453) |
+| x402 payment receiver | `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6` |
+| Payment token (USDCx) | `0xD04383398dD2426297da660F9CCA3d439AF9ce1b` |
+| Agent / author address | `0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7` |
+| ERC-8004 Identity Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| ERC-8004 Reputation Registry | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+
+The deployed server must have `PAYMENT_RECEIVER_ADDRESS` set to the receiver above; verify with `.../.well-known/x402` (`payTo`).
+
+---
+
 ## Architecture Overview
 
 PhantomOperator is **not** a single agent. It is an **agentic framework** composed of cooperating operators and swarms.
@@ -193,7 +222,7 @@ Planned MCP tools (examples):
 - `phantom_breach_check`
 - `phantom_metadata_audit`
 
-MCP manifests and tool schemas live under `/mcp/` and map to:
+The MCP server is planned (no `/mcp/` manifests are shipped yet). Tools will map to:
 
 - HTTP endpoints (e.g. `/skills/threat-scan`)
 - JSON parameter/response schemas
@@ -210,22 +239,7 @@ PhantomOperator is built to integrate with:
 - **8004scan.io** (autonomous agent explorer)
 - Other agent registries.
 
-Registry manifests live under:
-
-```text
-/registry-manifests
-  cryptoskill.json
-  cdp-bazaar.json
-  8004scan.json
-```
-
-Each manifest defines:
-
-- Name, description, maintainer
-- Public base URL
-- List of skills, paths, and methods
-- Chain (Base), token address, and payment receiver
-- Optional Monero payment details.
+Registry listings are generated from [`agent-manifest.json`](agent-manifest.json) (see `npm run register` and `npm run list-bazaar`); the server also publishes it live at the URLs below.
 
 Your deployment just needs to expose:
 
@@ -239,7 +253,7 @@ and host at a stable public URL.
 ### Getting listed
 
 1. Deploy publicly and set `PUBLIC_BASE_URL` (e.g. `https://phantom-operator.onrender.com`) so discovery documents carry the right URLs.
-2. Register on-chain identity (ERC-8004, shown on 8004scan.io): `npm run register`; point the agent's metadata at `<base>/.well-known/agent.json`.
+2. Register on-chain identity (ERC-8004, shown on 8004scan.io): `npm run register`; point the agent's metadata at https://phantom-operator.onrender.com/.well-known/agent.json.
 3. List on the Coinbase CDP x402 Bazaar: `npm run list-bazaar` (needs `AGENT_SERVER_URL`, `CDP_API_KEY_NAME`, `CDP_API_KEY_PRIVATE_KEY`). The 402 response includes an `outputSchema` so facilitators can index each skill's inputs.
 4. Submit the base URL to other x402 directories and agent platforms (e.g. bankr.bot) by hand — they crawl `/openapi.json`, `/llms.txt` and `/.well-known/x402`.
 5. Add GitHub topics (`x402`, `ai-agent`, `privacy`, `opsec`, `erc-8004`, `mcp`) in the repository settings.
@@ -276,7 +290,7 @@ Paid skill endpoints (x402 / Monero):
 An unpaid call returns `402` with an x402 descriptor. If no payment receiver is configured, paid endpoints return `503` (`Payment receiver not configured`). `OPTIONS` preflight returns `204`; allowed headers are `X-PAYMENT`, `X-PAYMENT-METHOD` and `Content-Type`.
 
 ```bash
-curl -i -X POST http://localhost:3000/skills/opsec-score \
+curl -i -X POST https://phantom-operator.onrender.com/skills/opsec-score \
   -H "Content-Type: application/json" -d '{}'
 # HTTP/1.1 402 Payment Required
 ```
