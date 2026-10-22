@@ -1,0 +1,11 @@
+# PhantomOperator
+
+> Privacy and OPSEC agent: PII threat scans, data-broker opt-outs, breach checks, metadata audits and OPSEC scoring. Paid per call via x402 (USDCx on Base).
+
+- [Agent index](/): endpoints and links
+- [SKILL.md](/SKILL.md): skill description
+- [OpenAPI](/openapi.json): API spec including 402 responses
+- [Manifest](/manifest): agent manifest (also /.well-known/agent.json)
+- [Health](/health): liveness
+
+Paid endpoints: POST /skills/{threat-scan,data-removal,full-privacy-sweep,opsec-score,breach-check,metadata-audit}. Unpaid calls return HTTP 402 with an x402 payment descriptor.
