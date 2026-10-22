@@ -155,6 +155,7 @@ function llms(base) {
     '## Free',
     `- [Skill catalog](${base}/skills)`,
     `- [Agent manifest](${base}/manifest)`,
+    `- [Official logo](${base}/logo.png)`,
     `- [Terms of use](${base}/terms)`,
     `- [x402 resources](${base}/.well-known/x402)`,
     '',
@@ -212,10 +213,15 @@ const server = http.createServer(async (req, res) => {
       const rl = checkRateLimit(ip, RATE_LIMIT_PUBLIC);
       if (!rl.allowed) return send(res, 429, { error: 'Too many requests', retryAfter: rl.retryAfter }, { 'Retry-After': String(rl.retryAfter) });
       switch (url) {
-        case '/': return send(res, 200, { service: 'PhantomOperator', description: manifest.description, ...catalog(base), discovery: { llms: base + '/llms.txt', x402: base + '/.well-known/x402', manifest: base + '/manifest' } });
+        case '/': return send(res, 200, { service: 'PhantomOperator', description: manifest.description, ...catalog(base), discovery: { llms: base + '/llms.txt', x402: base + '/.well-known/x402', manifest: base + '/manifest', logo: base + '/logo.png' } });
         case '/health': return send(res, 200, { status: 'ok', agent: manifest.name, version: manifest.version });
-        case '/manifest': return send(res, 200, manifest);
-        case '/skills': return send(res, 200, catalog(base));
+        case '/manifest': return send(res, 200, { ...manifest, image: base + '/logo.png', logo: base + '/logo.png', payment: { ...manifest.payment, payTo: x402.PAY_TO } });
+        case '/skills': return send(res, 200, { ...catalog(base), logo: base + '/logo.png' });
+        case '/logo.png': {
+          const image = fs.readFileSync(path.join(__dirname, 'assets', 'phantom-operator-logo.png'));
+          res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': image.length, 'Cache-Control': 'public, max-age=3600' });
+          return res.end(image);
+        }
         case '/terms': return send(res, 200, TERMS);
         case '/llms.txt': return send(res, 200, llms(base));
         case '/.well-known/x402': return send(res, 200, {
