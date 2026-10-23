@@ -19,43 +19,14 @@
  *   medium   — leaks technology stack or approximate location
  *   low      — informational / minor fingerprint
  *
- * Uses only axios + cheerio (already installed).  No extra dependencies.
+ * Inspects HTTP headers and static HTML only. It does not inspect image EXIF,
+ * execute JavaScript, or fetch linked resources.
  */
 
 'use strict';
 
-const axios   = require('axios');
 const cheerio = require('cheerio');
-
-const USER_AGENT = 'PhantomOperator-MetaAudit/1.0 (https://github.com/normancomics/PhantomOperator)';
-const REQUEST_TIMEOUT_MS = 15000;
-
-// ── SSRF guard ────────────────────────────────────────────────────────────────
-// Block requests to private/loopback/link-local addresses and special hostnames
-// that would otherwise allow server-side request forgery.
-
-const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.|0\.|::1|fc|fd)/i;
-const PRIVATE_HOST_RE = /^(localhost|.*\.local|.*\.internal|metadata\.google\.internal)$/i;
-
-/**
- * Throw if the URL targets a private, loopback, or otherwise disallowed host.
- * This is a best-effort static guard — runtime DNS rebinding is not prevented
- * here but should be addressed at the network layer for production deployments.
- * @param {string} rawUrl
- */
-function assertSafeUrl(rawUrl) {
-  let parsed;
-  try { parsed = new URL(rawUrl); } catch { throw new Error('Invalid URL'); }
-
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('Only HTTP and HTTPS URLs are permitted');
-  }
-
-  const host = parsed.hostname;
-  if (PRIVATE_HOST_RE.test(host) || PRIVATE_IP_RE.test(host)) {
-    throw new Error('Requests to private or internal network addresses are not permitted');
-  }
-}
+const { safeFetch, SafeFetchError } = require('../lib/safe-fetch');
 
 // ── Risk classification rules ─────────────────────────────────────────────────
 
@@ -110,30 +81,47 @@ const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
 
 class MetadataAgent {
   /**
-   * Fetch a URL and return a full privacy/metadata audit report.
+   * Fetch a URL and report observations from HTTP headers and static HTML.
    *
    * @param {string} targetUrl - absolute HTTP/HTTPS URL to audit
    * @returns {Promise<MetadataAuditReport>}
    */
-  static async audit(targetUrl) {
-    // SSRF guard — must run before any network call
-    assertSafeUrl(targetUrl);
-
-    const { responseHeaders, body, finalUrl, statusCode } =
-      await MetadataAgent._fetch(targetUrl);
-
-    const headerFindings  = MetadataAgent._analyseHeaders(responseHeaders);
-    const $ = cheerio.load(body);
-    const metaFindings    = MetadataAgent._analyseMeta($);
-    const commentFindings = MetadataAgent._analyseComments($, body);
-    const resourceFindings = MetadataAgent._analyseExternalResources($, finalUrl);
+  static async audit(targetUrl, fetchOptions = {}) {
+    const fetched = await MetadataAgent._fetch(targetUrl, fetchOptions);
+    const { responseHeaders, body, finalUrl, statusCode } = fetched;
+    const contentType = String(responseHeaders['content-type'] || '').split(';')[0].trim().toLowerCase();
+    const inspectedHtml = contentType === 'text/html' || contentType === 'application/xhtml+xml';
+    if (statusCode < 200 || statusCode >= 300) {
+      throw new SafeFetchError('UPSTREAM_FAILED', 'Target returned an unsuccessful HTTP response; no metadata assessment was completed.');
+    }
+    if (!inspectedHtml) {
+      throw new SafeFetchError('UNSUPPORTED_CONTENT_TYPE', 'Metadata auditing requires an HTML or XHTML response; no metadata assessment was completed.', 422);
+    }
+    if (!body.trim()) {
+      throw new SafeFetchError('EMPTY_RESPONSE', 'Target returned an empty response; no metadata assessment was completed.');
+    }
+    const nonUtf8 = /charset\s*=\s*["']?(?!utf-?8\b|us-ascii\b)[a-z0-9-]+/i.test(String(responseHeaders['content-type'] || ''));
+    const headerFindings = MetadataAgent._analyseHeaders(responseHeaders, finalUrl);
+    const $ = cheerio.load(inspectedHtml ? body : '');
+    const metaFindings = inspectedHtml ? MetadataAgent._analyseMeta($) : [];
+    const commentFindings = inspectedHtml ? MetadataAgent._analyseComments($, body) : [];
+    const resourceFindings = inspectedHtml ? MetadataAgent._analyseExternalResources($, finalUrl) : [];
 
     const allFindings = [
       ...headerFindings,
       ...metaFindings,
       ...commentFindings,
       ...resourceFindings,
-    ];
+    ].map(finding => ({
+      ...finding,
+      evidence: {
+        sourceUrl: finalUrl,
+        observedAt: fetched.fetchedAt,
+        location: finding.category,
+        field: finding.field,
+        observation: finding.value === null ? 'absent in received response' : String(finding.value),
+      },
+    }));
 
     const riskCounts = { critical: 0, high: 0, medium: 0, low: 0 };
     for (const f of allFindings) riskCounts[f.riskLevel] = (riskCounts[f.riskLevel] || 0) + 1;
@@ -151,33 +139,39 @@ class MetadataAgent {
       findingCounts: riskCounts,
       findings:     allFindings,
       recommendation: MetadataAgent._buildRecommendation(allFindings, overallRisk),
-      timestamp:    new Date().toISOString(),
+      timestamp:    fetched.fetchedAt,
+      scope: 'http-headers-and-static-html',
+      status: nonUtf8 ? 'partial' : 'complete',
+      provenance: {
+        requestedUrl: targetUrl,
+        finalUrl,
+        fetchedAt: fetched.fetchedAt,
+        httpStatus: statusCode,
+        contentType: contentType || null,
+        bytesReceived: fetched.byteLength,
+        resolvedAddress: fetched.resolvedAddress,
+        redirects: fetched.redirects,
+        transport: fetched.transport,
+        inspectedHtml,
+      },
+      limitations: [
+        'This audit inspects the received HTTP headers and static HTML; it does not inspect image EXIF, execute JavaScript, or fetch linked resources.',
+        'Findings describe observable signals and do not prove the identity of an author or a complete absence of privacy exposure.',
+        ...(nonUtf8
+          ? ['The response declared a non-UTF-8 character set; HTML is decoded as UTF-8 and some text may be incomplete.'] : []),
+      ],
     };
   }
 
   // ── Private: HTTP fetch ─────────────────────────────────────────────────────
 
-  static async _fetch(url) {
-    const resp = await axios.get(url, {
-      headers:          { 'User-Agent': USER_AGENT },
-      timeout:          REQUEST_TIMEOUT_MS,
-      maxRedirects:     5,
-      validateStatus:   () => true, // capture any status code
-      responseType:     'text',
-      maxContentLength: 2 * 1024 * 1024, // 2 MB cap
-    });
-
-    return {
-      responseHeaders: resp.headers,
-      body:            resp.data || '',
-      finalUrl:        resp.request.res.responseUrl || url,
-      statusCode:      resp.status,
-    };
+  static async _fetch(url, options = {}) {
+    return safeFetch(url, options);
   }
 
   // ── Private: Header analysis ────────────────────────────────────────────────
 
-  static _analyseHeaders(headers) {
+  static _analyseHeaders(headers, pageUrl = 'https://unknown.invalid') {
     const findings = [];
 
     // Flag known leaky headers
@@ -196,6 +190,7 @@ class MetadataAgent {
 
     // Flag missing security headers
     for (const name of EXPECTED_SECURITY_HEADERS) {
+      if (name === 'strict-transport-security' && new URL(pageUrl).protocol !== 'https:') continue;
       if (!headers[name]) {
         findings.push({
           category:  'missing-security-header',
@@ -336,7 +331,7 @@ class MetadataAgent {
 
   static _buildRecommendation(findings, overallRisk) {
     if (overallRisk === 'none') {
-      return 'No metadata privacy issues detected. Continue auditing periodically.';
+      return 'No configured metadata risk signals were found in the inspected response. Continue auditing periodically.';
     }
 
     const parts = [];

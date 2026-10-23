@@ -3,16 +3,16 @@ services:
     name: phantom-operator
     runtime: node
     plan: free
-    buildCommand: npm install --omit=optional
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: "20.19.2"
+        value: "24.19.0"
       - key: NODE_ENV
         value: production
       - key: PAY_TO
-        value: "0x3d95D4A6DbaE0Cd0643a82b13A13b08921D6ADf7"
+        value: "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
       - key: RATE_LIMIT_PUBLIC
         value: "60"
       - key: RATE_LIMIT_PAID

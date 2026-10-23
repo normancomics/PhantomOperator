@@ -1,19 +1,31 @@
 {
   "name": "phantom-operator",
-  "version": "0.1.0",
-  "description": "PhantomOperator — multi-operator privacy and OPSEC agentic framework",
+  "version": "0.2.0",
+  "description": "Evidence-based privacy and OPSEC assessments for people and agents, paid per call with x402 USDC on Base.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "node test.js",
+    "start": "node --use-env-proxy server.js",
+    "test": "node --test tests/*.test.js",
     "register": "node scripts/register.js",
     "list-bazaar": "node scripts/list-on-bazaar.js",
     "solana:check": "bash solana/scripts/check-solana.sh",
     "solana:build": "bash solana/scripts/build.sh",
     "solana:deploy": "bash solana/scripts/deploy.sh",
-    "solana:invoke": "node scripts/solana-invoke.js"
+    "solana:invoke": "node scripts/solana-invoke.js",
+    "test:demo": "node test.js",
+    "check-deployment": "node --use-env-proxy scripts/check-deployment.js",
+    "prepare-registration": "node scripts/prepare-registration.js"
   },
-  "keywords": [],
+  "keywords": [
+    "x402",
+    "erc-8004",
+    "privacy",
+    "opsec",
+    "metadata-audit",
+    "agent-discovery",
+    "usdc",
+    "base"
+  ],
   "author": "normancomics <normancomics.eth> (https://github.com/normancomics)",
   "license": "MIT",
   "dependencies": {

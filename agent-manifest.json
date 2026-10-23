@@ -2,8 +2,8 @@
   "schemaVersion": "1.0.0",
   "name": "PhantomOperator",
   "handle": "normancomics.base.eth",
-  "description": "Privacy and OPSEC agent: audits web pages for metadata leaks and scores public-web PII exposure (self or authorized use only). Pay per call via x402 (USDC on Base).",
-  "version": "0.1.0",
+  "description": "Evidence-based public-web privacy assessments: HTML metadata exposure, authorized search-result PII triage, and OPSEC scoring with source coverage and remediation. Pay per successful call with x402 USDC on Base.",
+  "version": "0.2.0",
   "author": {
     "name": "normancomics",
     "address": "0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7",
@@ -30,7 +30,7 @@
         {
           "name": "threats",
           "type": "array",
-          "description": "Array of detected threats with title, link, description, threatLevel (benign/high/critical), and reasons"
+          "description": "Array of detected threats with title, link, description, threatLevel (benign/medium/high/critical), and reasons"
         }
       ],
       "pricing": {
@@ -50,7 +50,7 @@
     {
       "id": "opsec-score",
       "name": "OPSEC Exposure Score",
-      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0–100) with grade A–F and prioritised remediation steps. Ideal for red teamers, PERSEC auditors, and privacy-first individuals.",
+      "description": "Assess public search-result exposure for an authorized name, handle or email with heuristic scores, source coverage, limitations and remediation.",
       "version": "0.1.0",
       "inputs": [
         {
@@ -73,12 +73,12 @@
         {
           "name": "score",
           "type": "number",
-          "description": "Exposure score 0–100 (higher = worse OPSEC)"
+          "description": "Exposure score 0\u2013100 (higher = worse OPSEC)"
         },
         {
           "name": "grade",
           "type": "string",
-          "description": "Letter grade A–F"
+          "description": "Letter grade A\u2013F"
         },
         {
           "name": "breakdown",
@@ -115,7 +115,7 @@
     {
       "id": "metadata-audit",
       "name": "Metadata Privacy Audit",
-      "description": "Fetch any HTTP/HTTPS URL and extract all metadata that could de-anonymise its author or expose infrastructure details: HTTP response headers (Server, X-Powered-By, X-Generator), HTML <meta> tags (author, geo.*, email), inline HTML comments (version strings, file paths), and third-party resource origins. Each finding is classified critical / high / medium / low with a remediation recommendation.",
+      "description": "Audit HTTP headers, HTML metadata, comments and third-party resource origins for privacy exposure. Includes evidence and remediation; does not inspect image EXIF.",
       "version": "0.1.0",
       "inputs": [
         {
@@ -158,7 +158,6 @@
         "opsec",
         "privacy",
         "http-headers",
-        "exif",
         "fingerprinting",
         "pentesting"
       ]

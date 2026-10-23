@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "slug": "phantom-operator",
+  "provider": "PhantomOperator",
+  "providerUrl": "https://phantom-operator.onrender.com",
+  "logo": "logo.svg",
+  "demo": {
+    "title": "unpaid-metadata-quote.sh",
+    "language": "bash",
+    "code": "# Unpaid x402 quote only; expected HTTP 402. Does not sign or pay.\ncurl -i --max-time 60 -X POST https://phantom-operator.onrender.com/skills/metadata-audit -H 'Content-Type: application/json' --data '{\"url\":\"https://example.com\"}'"
+  },
+  "setup": [
+    "Contribution draft only: not submitted, approved, or available from the proposed upstream install path yet.",
+    "Read https://phantom-operator.onrender.com/openapi.json and https://phantom-operator.onrender.com/terms; confirm the live service and payment receiver.",
+    "Use an authorized x402 v2 exact client and Base USDC wallet for paid calls: Metadata Audit 0.05, Threat Scan 0.10, or OPSEC Exposure Score 0.25 USDC.",
+    "Obtain explicit subject authorization before personal-exposure checks; threat-scan and opsec-score require consent:true."
+  ],
+  "install": {
+    "type": "bankr",
+    "repoPath": "phantom-operator",
+    "command": "install the phantom-operator skill from https://github.com/BankrBot/skills/tree/main/phantom-operator"
+  }
+}
