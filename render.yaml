@@ -3,7 +3,7 @@ services:
     name: phantom-operator
     runtime: node
     plan: free
-    buildCommand: npm ci
+    buildCommand: npm ci --omit=optional
     startCommand: npm start
     healthCheckPath: /health
     envVars:

@@ -1,6 +1,6 @@
 # PhantomOperator discovery and launch packet
 
-Status: **prepared locally; no directory submission, Bankr contribution, registry
+Status: **prepared for review; no directory submission, Bankr contribution, registry
 transaction, social post, or paid production call is implied by this document**.
 Production target: <https://phantom-operator.onrender.com>. Run the deployment
 checks below after publishing this revision; prepared source does not establish
@@ -269,3 +269,7 @@ rules can change.
 5. [Official x402 README: ecosystem directories](https://github.com/coinbase/x402#ecosystem).
 6. [Official x402 Bazaar extension specification](https://github.com/coinbase/x402/blob/main/specs/extensions/bazaar.md).
 7. [Bankr's BlueAgent catalog example](https://github.com/BankrBot/skills/blob/main/blueagent/catalog.json) and [skill instructions](https://github.com/BankrBot/skills/blob/main/blueagent/SKILL.md).
+
+### Repository discovery settings
+
+Suggested GitHub topics: `x402`, `erc-8004`, `privacy`, `opsec`, `metadata-audit`, `agent-tools`, `agent-discovery`, `usdc`, and `base`. Preserve existing relevant topics. Set a concise, accurate About description. In this session, GitHub allowed branch and pull-request publication but refused topic updates with `403 Resource not accessible by integration`; the repository owner can apply these through the repository About settings. Verify the public service before adding it as the repository homepage.

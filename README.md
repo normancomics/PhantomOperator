@@ -17,11 +17,11 @@ The distinctive product proposition is **explainable privacy preflight for agent
 Use the existing checkout; a cloud task already provides isolation. Do not create another Git worktree for routine setup.
 
 ```bash
-npm ci
+npm ci --omit=optional
 npm test
 ```
 
-The default test suite uses local fixtures and mock facilitator responses; it never makes a payment. `npm run test:demo` retains the old prototype demo and is not production validation.
+The default test suite uses local fixtures and mock facilitator responses; it never makes a payment. `npm run test:demo` is a legacy optional-SDK prototype; it is excluded from the production install and is not production validation.
 
 Start with public runtime settings:
 
@@ -31,9 +31,9 @@ PUBLIC_URL=https://phantom-operator.onrender.com \
 npm start
 ```
 
-On Render, set `PAY_TO` in **Environment**; `RENDER_EXTERNAL_URL` supplies the canonical origin unless `PUBLIC_URL` is set. The server reads process variables rather than automatically loading `.env`. For local Node versions supporting it, `node --env-file=.env server.js` is available. Never copy example private-key placeholders into this production workflow. The payment receiver is independent from the repository author's identity and from an ERC-8004 token owner.
+On Render, set `PAY_TO` in **Environment**; `RENDER_EXTERNAL_URL` supplies the canonical origin unless `PUBLIC_URL` is set. The server reads process variables rather than automatically loading `.env`. For local Node versions supporting it, `node --use-env-proxy --env-file=.env server.js` is available. Never copy example private-key placeholders into this production workflow. The payment receiver is independent from the repository author's identity and from an ERC-8004 token owner.
 
-The repository lock is now synchronized with its manifest. A direct frozen `npm ci` replaces the earlier cloud-only external-lock workaround. Node24 is used in the Render blueprint. No extra database, Solana toolchain, or wallet key is required to serve the enabled API.
+The repository lock is now synchronized with its manifest. A direct frozen `npm ci --omit=optional` replaces the earlier cloud-only external-lock workaround. Unused Superfluid and Solana libraries are excluded from the hosted artifact; a full install is only for separately reviewed legacy tooling. Node24 is used in the Render blueprint. No extra database, Solana toolchain, or wallet key is required to serve the enabled API.
 
 ## Use the API
 
@@ -93,5 +93,7 @@ Read [Terms](TERMS.md) and [the security/privacy review](docs/SECURITY-PRIVACY.m
 Public-page fetches validate and pin DNS results, block private/special destinations, revalidate redirects, and cap time and response size. Forward proxies without documented DNS-pinning semantics are unsupported for arbitrary metadata targets; the server fails closed rather than bypassing proxy policy. Search uses a fixed provider endpoint. External-provider blocking, throttling and incompleteness remain operational risks.
 
 Render's free tier can sleep: cold starts can cause crawlers or paying agents to time out. Choose an always-on plan and stable canonical domain before promoting a reliability claim. This is an owner billing decision, not something the software silently enables.
+
+The production dependency audit has no moderate, high or critical findings at review time; 14 low findings remain documented in [the dependency review](docs/DEPENDENCY-REVIEW.md). Optional legacy tools retain additional advisories and are excluded from Render and CI.
 
 Declared package license: MIT. See [LICENSE](LICENSE). Self-hosting source and the HTTP client contract remain available if the hosted endpoint or facilitator becomes unavailable; no user funds are held by this server.

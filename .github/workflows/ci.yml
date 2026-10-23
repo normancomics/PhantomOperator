@@ -31,7 +31,9 @@ jobs:
           node-version: '24.19.0'
           cache: npm
       - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm ci --omit=optional --no-audit --no-fund
+      - name: Check production dependency advisories
+        run: npm audit --omit=optional --audit-level=moderate
       - name: Run fixture and local HTTP tests
         run: npm test
       - name: Check production startup and unpaid discovery

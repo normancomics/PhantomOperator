@@ -29,13 +29,18 @@
   "author": "normancomics <normancomics.eth> (https://github.com/normancomics)",
   "license": "MIT",
   "dependencies": {
-    "@superfluid-finance/sdk-core": "^0.8.0",
-    "axios": "^1.14.0",
+    "axios": "^1.20.0",
     "cheerio": "1.0.0-rc.12",
     "dotenv": "16.0.3",
-    "ethers": "5.7.2"
+    "ethers": "5.8.0"
   },
   "optionalDependencies": {
-    "@solana/web3.js": "^1.98.4"
+    "@solana/web3.js": "^1.98.4",
+    "@superfluid-finance/sdk-core": "^0.8.0"
+  },
+  "overrides": {
+    "@ethersproject/providers@5.8.0": {
+      "ws": "8.21.0"
+    }
   }
 }
