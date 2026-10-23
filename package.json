@@ -1,29 +1,46 @@
 {
   "name": "phantom-operator",
-  "version": "0.1.0",
-  "description": "PhantomOperator — multi-operator privacy and OPSEC agentic framework",
+  "version": "0.2.0",
+  "description": "Evidence-based privacy and OPSEC assessments for people and agents, paid per call with x402 USDC on Base.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "node test.js",
+    "start": "node --use-env-proxy server.js",
+    "test": "node --test tests/*.test.js",
     "register": "node scripts/register.js",
     "list-bazaar": "node scripts/list-on-bazaar.js",
     "solana:check": "bash solana/scripts/check-solana.sh",
     "solana:build": "bash solana/scripts/build.sh",
     "solana:deploy": "bash solana/scripts/deploy.sh",
-    "solana:invoke": "node scripts/solana-invoke.js"
+    "solana:invoke": "node scripts/solana-invoke.js",
+    "test:demo": "node test.js",
+    "check-deployment": "node --use-env-proxy scripts/check-deployment.js",
+    "prepare-registration": "node scripts/prepare-registration.js"
   },
-  "keywords": [],
+  "keywords": [
+    "x402",
+    "erc-8004",
+    "privacy",
+    "opsec",
+    "metadata-audit",
+    "agent-discovery",
+    "usdc",
+    "base"
+  ],
   "author": "normancomics <normancomics.eth> (https://github.com/normancomics)",
   "license": "MIT",
   "dependencies": {
-    "@superfluid-finance/sdk-core": "^0.8.0",
-    "axios": "^1.14.0",
+    "axios": "^1.20.0",
     "cheerio": "1.0.0-rc.12",
     "dotenv": "16.0.3",
-    "ethers": "5.7.2"
+    "ethers": "5.8.0"
   },
   "optionalDependencies": {
-    "@solana/web3.js": "^1.98.4"
+    "@solana/web3.js": "^1.98.4",
+    "@superfluid-finance/sdk-core": "^0.8.0"
+  },
+  "overrides": {
+    "@ethersproject/providers@5.8.0": {
+      "ws": "8.21.0"
+    }
   }
 }

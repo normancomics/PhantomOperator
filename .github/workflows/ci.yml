@@ -1,0 +1,56 @@
+name: Agent checks
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node 24 tests and production startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NODE_ENV: test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Match the deployed runtime in render.yaml.
+          node-version: '24.19.0'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --omit=optional --no-audit --no-fund
+      - name: Check production dependency advisories
+        run: npm audit --omit=optional --audit-level=moderate
+      - name: Run fixture and local HTTP tests
+        run: npm test
+      - name: Check production startup and unpaid discovery
+        env:
+          NODE_ENV: production
+          PORT: '3100'
+          PUBLIC_URL: http://127.0.0.1:3100
+          # No real facilitator, wallet, credentials, or paid execution in CI.
+          FACILITATOR_URL: https://facilitator.invalid
+        run: |
+          setsid npm start > "$RUNNER_TEMP/phantom-operator.log" 2>&1 &
+          server_pid=$!
+          trap 'kill -- "-$server_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 20 --retry-delay 1 \
+            --retry-connrefused --max-time 2 --retry-max-time 30 \
+            "$PUBLIC_URL/health" > /dev/null
+          npm run check-deployment -- "$PUBLIC_URL" --allow-http
+      - name: Show startup log on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/phantom-operator.log" 2>/dev/null || true

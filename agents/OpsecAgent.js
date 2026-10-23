@@ -16,7 +16,7 @@
  * Designed for: red teamers, PERSEC auditors, privacy-conscious individuals,
  * and agentic privacy sweeps.
  *
- * No external LLM required — all scoring is deterministic and offline-capable.
+ * No external LLM required — scoring is deterministic, using public-search evidence.
  */
 
 'use strict';
@@ -77,28 +77,44 @@ class OpsecAgent {
    *   At least one identifier must be provided.
    * @returns {Promise<OpsecReport>}
    */
-  static async assess(target) {
+  static async assess(target, options = {}) {
+    if (!target || typeof target !== 'object' || Array.isArray(target)) {
+      throw Object.assign(new Error('At least one target identifier is required.'), { code: 'INVALID_TARGET', statusCode: 400 });
+    }
+    const identifiers = {};
+    for (const key of ['fullName', 'handle', 'email']) {
+      if (target[key] === undefined) continue;
+      if (typeof target[key] !== 'string' || !target[key].trim() || target[key].length > 512 || /[\x00-\x1f\x7f]/.test(target[key])) {
+        throw Object.assign(new Error('Target identifiers must be nonempty strings of at most 512 characters.'), { code: 'INVALID_TARGET', statusCode: 400 });
+      }
+      identifiers[key] = target[key].trim();
+    }
     const queries = [];
-    if (target.fullName) queries.push(target.fullName);
-    if (target.handle)   queries.push(`"${target.handle}"`);
-    if (target.email)    queries.push(target.email);
+    if (identifiers.fullName) queries.push(identifiers.fullName);
+    if (identifiers.handle)   queries.push(`"${identifiers.handle}"`);
+    if (identifiers.email)    queries.push(identifiers.email);
 
-    if (queries.length === 0) throw new Error('At least one of fullName, handle, or email is required');
+    if (queries.length === 0) {
+      throw Object.assign(new Error('At least one of fullName, handle, or email is required.'), { code: 'INVALID_TARGET', statusCode: 400 });
+    }
 
     // Parallel search for all target identifiers
     const settled = await Promise.allSettled(
-      queries.map(q => SearchAgent.performDuckDuckGoSearch(q, 15))
+      queries.map(q => SearchAgent.performDuckDuckGoSearch(q, 15, options))
     );
 
-    // If every search failed (e.g. search engine unreachable), fail loudly instead of
-    // returning a misleadingly low score. The server does not charge for errors.
-    if (settled.every(r => r.status === 'rejected')) {
-      throw new Error('Public web search is unavailable right now; please retry later');
+    // Every supplied identifier must be searched successfully before scoring.
+    // The server settles payment only after this method returns successfully.
+    if (settled.some(result => result.status === 'rejected')) {
+      throw Object.assign(new Error('The identifier searches could not all be completed; please retry later.'), { code: 'SEARCH_INCOMPLETE', statusCode: 503 });
     }
 
     const allResults = settled
       .filter(r => r.status === 'fulfilled')
       .flatMap(r => r.value);
+    if (allResults.length === 0) {
+      throw Object.assign(new Error('No public search evidence was returned; no exposure score was produced.'), { code: 'SEARCH_NO_EVIDENCE', statusCode: 503 });
+    }
 
     // De-duplicate results by URL
     const seen      = new Set();
@@ -124,7 +140,8 @@ class OpsecAgent {
     ));
 
     return {
-      target,
+      target: identifiers,
+      provider: SearchAgent.PROVIDER,
       score,
       grade: grade(score),
       breakdown,
@@ -133,8 +150,25 @@ class OpsecAgent {
         snippet:        p.text.slice(0, 220),
         relevanceScore: p.score,
         threatLevel:    p.threatLevel,
+        provenance:     deduped.find(result => result.link === p.source)?.provenance,
       })),
       recommendations: OpsecAgent._generateRecommendations(breakdown, score),
+      coverage: {
+        complete: true,
+        identifiersSearched: queries.length,
+        searchesCompleted: settled.length,
+        searchesWithResults: settled.filter(result => result.value.length > 0).length,
+        resultsRetrieved: allResults.length,
+        uniqueResults: deduped.length,
+        maxResultsPerSearch: 15,
+        scope: 'public-search-snippets',
+      },
+      limitations: [
+        ...SearchAgent.LIMITATIONS,
+        'Coverage complete means each requested identifier search completed, not that the whole web was searched.',
+        'The score and grade summarize observed signals using fixed weights; they do not certify identity, account ownership or overall security.',
+        'Broker, paste and social classifications identify domains in search results; they do not verify active accounts, a breach or a broker record.',
+      ],
       timestamp: new Date().toISOString(),
     };
   }
@@ -160,7 +194,10 @@ class OpsecAgent {
     // 4. Social Media Footprint
     const socialHits     = results.filter(r => domainMatches(extractDomain(r.link), SOCIAL_DOMAINS));
     const socialScore    = Math.min(100, socialHits.length * 12);
-    const socialPlatforms = [...new Set(socialHits.map(r => extractDomain(r.link)).filter(Boolean))];
+    const socialPlatforms = [...new Set(socialHits.map(result => {
+      const domain = extractDomain(result.link);
+      return SOCIAL_DOMAINS.find(platform => domain === platform || domain.endsWith(`.${platform}`));
+    }).filter(Boolean))];
 
     return {
       searchExposure: {
@@ -181,7 +218,7 @@ class OpsecAgent {
       },
       socialFootprint: {
         score:         socialScore,
-        platformCount: socialHits.length,
+        platformCount: socialPlatforms.length,
         platforms:     socialPlatforms,
       },
     };
@@ -205,7 +242,7 @@ class OpsecAgent {
         action:   'Remove PII from public web',
         detail:   `${breakdown.searchExposure.criticalFindings} critical finding(s) detected ` +
                   '(phone numbers or SSNs visible in search snippets). ' +
-                  'Run the full-privacy-sweep skill to begin automated removal.',
+                  'Verify that the source refers to you, then request correction or removal through the publisher\'s official process.',
       });
     }
 
@@ -213,9 +250,9 @@ class OpsecAgent {
       recs.push({
         priority: 'HIGH',
         action:   'Submit data broker opt-out requests',
-        detail:   `Indexed by ${breakdown.dataBrokerExposure.brokerCount} data broker(s): ` +
+        detail:   `Found ${breakdown.dataBrokerExposure.brokerCount} search result(s) matching broker domains: ` +
                   `${breakdown.dataBrokerExposure.brokers.join(', ')}. ` +
-                  'Use the data-removal skill to submit automated opt-out requests.',
+                  'Verify the record and use each broker\'s official opt-out process; no removal has been submitted by this assessment.',
       });
     }
 
@@ -223,9 +260,9 @@ class OpsecAgent {
       recs.push({
         priority: 'MEDIUM',
         action:   'Reduce social media footprint',
-        detail:   `Active across ${breakdown.socialFootprint.platformCount} platforms ` +
+        detail:   `Search results matched ${breakdown.socialFootprint.platformCount} social platforms ` +
                   `(${breakdown.socialFootprint.platforms.join(', ')}). ` +
-                  'Consider deleting or pseudonymising inactive accounts and tightening privacy settings.',
+                  'Verify account ownership before deciding whether to delete or pseudonymise inactive accounts and tighten privacy settings.',
       });
     }
 
@@ -242,7 +279,7 @@ class OpsecAgent {
       recs.push({
         priority: 'INFO',
         action:   'Maintain current OPSEC posture',
-        detail:   'Excellent score. Continue using strong pseudonymity practices, unique emails per service, and monitor regularly.',
+        detail:   'Few exposure signals appeared in the retrieved snippets. Review the source matches and coverage limitations, use unique emails per service, and monitor regularly.',
       });
     }
 

@@ -1,385 +1,99 @@
 # PhantomOperator
 
-<p align="center"><img src="assets/phantom-operator-logo.png" alt="PhantomOperator logo" width="256"></p>
+Evidence-based public-web privacy assessments for people and agents. Pay per completed assessment with **x402 v2, exact, USDC on Base**. No subscription or server-side signing wallet is needed for the three enabled skills.
 
+| Skill | Per successful call | What it does |
+| --- | ---: | --- |
+| `metadata-audit` | $0.05 USDC | Inspects a public page's HTTP headers, HTML metadata/comments and third-party resource origins; returns observations, evidence and remediation. |
+| `threat-scan` | $0.10 USDC | Classifies authorized public search-result snippets for potential PII exposure and returns source links and reasons. |
+| `opsec-score` | $0.25 USDC | Combines authorized public-search evidence into a heuristic exposure score, coverage report and practical remediation. |
 
-Created by normancomics — normancomics.eth · normancomics.base.eth · normancomics.reserve.superfluid.eth · 0x3d95d4a6dbae0cd0643a82b13a13b08921d6adf7
+`threat-scan` and `opsec-score` require `"consent": true` and may be used only for yourself or an explicitly authorized client. A result is not proof of identity, a clean bill of privacy, or exhaustive web coverage. Search-provider blocks are errors, not benign findings. No unsupported automatic broker removals, breach-database access, image EXIF analysis or Monero payments are advertised.
 
-**PhantomOperator** is a **multi-operator privacy and OPSEC framework** for people who want to *vanish* from data brokers, minimize surveillance, and maintain stealth online.
+The distinctive product proposition is **explainable privacy preflight for agent workflows**: source-backed observations, explicit coverage and uncertainty, machine-readable contracts, and payments settled only after the assessment succeeds. These are useful implementation properties, not a claim that no competing product exists.
 
-- Agentic swarms coordinate:
-  - Automated data-broker opt-outs and prioritized threat remediation
-  - OSINT / PII threat scans
-  - OPSEC exposure scoring
-  - Metadata and tracking audits
-  - Breach checks via k-anonymity
-- Monetized on **Base** (USDCx / ERC-20 via x402).
-- Optional **Monero payments** for users who do not want any public-chain correlation.
-- Designed for integration with RAG and MCP so other agents / LLMs can call PhantomOperator as a backend.
-- Intended for listing on **CryptoSkill**, **Coinbase CDP Bazaar**, **8004scan.io**, and other agent registries.
+## Run and test
 
-
-> ## 🚀 Render deployment (`render-x402` branch)
->
-> This branch runs PhantomOperator as a hosted x402 service on Render's **free** tier. It needs **no paid API keys** and **no private keys**.
->
-> | Skill | Price | Data source |
-> |---|---|---|
-> | `POST /skills/metadata-audit` `{url}` | $0.05 | Direct fetch of the URL you supply |
-> | `POST /skills/threat-scan` `{fullName, consent:true}` | $0.10 | DuckDuckGo HTML search |
-> | `POST /skills/opsec-score` `{fullName?, handle?, email?, consent:true}` | $0.25 | DuckDuckGo HTML search |
->
-> Payments are real **x402 v2** (`exact` scheme). They are made in plain **USDC on Base mainnet**, paid to `normancomics.eth` (`0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`), and settled through the keyless PayAI facilitator. A payment is settled only after a successful response. Invalid input and errors are not charged.
->
-> **Free endpoints:** `/`, `/health`, `/manifest`, `/skills`, `/terms`, `/llms.txt`, `/.well-known/x402`.
->
-> **Disabled on this deployment:**
-> - `breach-check`: needs a paid HIBP API key.
-> - `data-removal`: was a stub that didn't submit anything.
-> - `full-privacy-sweep`: needs a wallet private key and Superfluid.
-> - Monero, Solana and Python tooling.
->
-> **Render setup:**
-> - **Build:** `npm install --omit=optional`
-> - **Start:** `npm start`
-> - **Health check:** `/health`
-> - **Env** (all optional): `PAY_TO`, `FACILITATOR_URL`, `RATE_LIMIT_PUBLIC` (60), `RATE_LIMIT_PAID` (10), `MAX_BODY_BYTES`. Render sets `PORT` and `RENDER_EXTERNAL_URL` automatically.
->
-> Use is subject to [TERMS.md](TERMS.md). Scans are for **yourself or authorized targets only**.
-
-
----
-
-## Architecture Overview
-
-PhantomOperator is **not** a single agent. It is an **agentic framework** composed of cooperating operators and swarms.
-
-### 1. OrchestratorOperator (Core Brain)
-
-The `OrchestratorOperator` coordinates everything:
-
-- Receives high-level intents via:
-  - HTTP API (`/skills/...`)
-  - Future: scheduled jobs (Postgres + `pg_cron`)
-  - Future: MCP tool calls
-- Decomposes work into sub-tasks:
-  - Which data brokers to target
-  - Which OSINT surfaces to scan
-  - Which breach / metadata checks to run
-- Delegates tasks to domain operators.
-- Tracks job status and aggregates results for the caller.
-
-### 2. Domain Operators
-
-Each operator focuses on a specific piece of the privacy / OPSEC surface:
-
-- **SearchOperator**  
-  (backed by `SearchAgent`)  
-  OSINT / PII search and threat discovery.
-
-- **BrokerOperator**  
-  (backed by `BrokerAgent`)  
-  Data-broker opt-outs and prioritized threat remediation.
-
-- **OpsecOperator**  
-  (backed by `OpsecAgent`)  
-  Multi-vector OPSEC exposure scoring (handles, emails, names).
-
-- **BreachOperator**  
-  (backed by `BreachAgent`)  
-  Email/password breach checks via k-anonymity APIs.
-
-- **MetadataOperator**  
-  (backed by `MetadataAgent`)  
-  HTTP/HTML metadata, trackers, and fingerprinting audits.
-
-Existing `/skills/*` endpoints already map to these capabilities; over time they will be internally routed through `OrchestratorOperator`.
-
-### 3. Sub-Operators & Swarms (Planned)
-
-PhantomOperator extends into swarms of smaller operators:
-
-- **Broker-specific sub-operators**
-  - One per broker (Spokeo, Whitepages, BeenVerified, etc.).
-  - Encapsulates URLs, form flows, and required PII.
-- **Scraper sub-operators**
-  - Focused crawlers / scrapers for specific OSINT surfaces.
-- **Swarms**
-  - A swarm is a set of sub-operators executing in parallel across a target identity.
-  - Triggered by:
-    - Direct calls like `POST /skills/full-privacy-sweep`
-    - Scheduled pg_cron jobs (e.g. weekly sweeps)
-    - Events (e.g. a new breach detection).
-
-### 4. Storage, Jobs & Scheduling (Planned)
-
-Planned job system (optional but recommended):
-
-- **Postgres** as a central store:
-  - `jobs` table — queued tasks with type, payload, status, timestamps.
-  - `job_results` table — normalized results per operator run.
-- **`pg_cron`** for scheduling recurring tasks:
-  - e.g. daily OSINT sweeps, weekly broker re-checks, breach monitoring.
-- **Worker processes**:
-  - One or more Node.js workers poll `jobs` where `status = 'pending'`,
-    delegate to operators, and write back `status` and results.
-
-PhantomOperator runs as a regular Node.js HTTP server; Postgres is only required when you enable scheduled jobs and persistence.
-
----
-
-## Payments & Monetization
-
-### On-chain (Base via x402)
-
-PhantomOperator uses an x402-compatible payment middleware (HTTP 402 Payment Required):
-
-- For a paid skill:
-  1. Client calls `POST /skills/{id}` without payment.
-  2. Server responds with `402` and a JSON x402 descriptor:
-     - network: Base mainnet
-     - asset: payment token (e.g. USDCx)
-     - payTo: receiver address
-     - maxAmountRequired: skill price
-  3. Client pays and submits a signed proof in the `X-PAYMENT` header.
-  4. PhantomOperator validates the proof and serves the response.
-
-See [`server.js`](server.js) for:
-
-- `SKILL_PRICES`
-- `validatePayment(...)`
-- x402 enforcement in `handlePaidSkill(...)`
-
-### Monero (True Privacy Path)
-
-For users who do **not** want any public-chain trace:
-
-- Primary Monero address:
-
-  `83povooYdUgEArc13ZzaVp5vqGpDpKJ6WJ971NL94sbRcneqBtXB7N3XLN57v1fqddbinPjYCcwjk7AkrrwVJupFNU84XCq`
-
-#### Intended Monero Flow (Design)
-
-1. Client requests a Monero quote:
-
-   `POST /billing/monero-quote`  
-   `{ "skillId": "full-privacy-sweep" }`
-
-2. PhantomOperator (or a trusted Monero bridge service) returns:
-
-   - XMR amount
-   - Monero address or subaddress
-   - One-time invoice token.
-
-3. Client pays from their Monero wallet.
-
-4. Bridge service detects payment and issues a signed proof (JSON/JWT) bound to the invoice token.
-
-5. Client calls `POST /skills/{id}` with:
-
-   - `X-PAYMENT-METHOD: monero`
-   - `X-PAYMENT: <base64(moneroProofJson)>`
-
-6. PhantomOperator verifies the proof via the bridge:
-
-   - If valid and unused → executes the skill.
-   - Otherwise → returns `402` with payment instructions.
-
-> Implementation detail: Monero wallet/node operations are intended to run in a separate service; this repo focuses on integration and validation hooks.
-
----
-
-## RAG & MCP Integration
-
-PhantomOperator can be used as a **back-end OPSEC engine** for other agents via RAG and MCP.
-
-### RAG (Retrieval-Augmented Generation)
-
-Two retrieval layers:
-
-1. **Broker / Legal Knowledge**
-   - Vector index of:
-     - Broker privacy policies
-     - Opt-out documentation
-     - Data protection laws (GDPR, CCPA, etc.).
-   - Operators query this index to generate:
-     - Correct removal flows
-     - Compliant letters / emails / webform payloads.
-
-2. **User Context**
-   - Per-identity “case file”:
-     - Known brokers with profiles removed
-     - Successful / pending removals
-     - Preferred channels and previous findings.
-   - RAG ensures each new action builds on history; reduces redundant work.
-
-### MCP (Model Context Protocol)
-
-PhantomOperator exposes skills as MCP tools, so LLMs and agent frameworks can call it directly:
-
-Planned MCP tools (examples):
-
-- `phantom_threat_scan`
-- `phantom_data_removal`
-- `phantom_full_privacy_sweep`
-- `phantom_opsec_score`
-- `phantom_breach_check`
-- `phantom_metadata_audit`
-
-MCP manifests and tool schemas live under `/mcp/` and map to:
-
-- HTTP endpoints (e.g. `/skills/threat-scan`)
-- JSON parameter/response schemas
-- Pricing hints (x402 + Monero paths)
-
----
-
-## Agent Registries & Discovery
-
-PhantomOperator is built to integrate with:
-
-- **CryptoSkill** (x402 skill registry)
-- **Coinbase CDP Bazaar** (agent registry on Base)
-- **8004scan.io** (autonomous agent explorer)
-- Other agent registries.
-
-Registry manifests live under:
-
-```text
-/registry-manifests
-  cryptoskill.json
-  cdp-bazaar.json
-  8004scan.json
-```
-
-Each manifest defines:
-
-- Name, description, maintainer
-- Public base URL
-- List of skills, paths, and methods
-- Chain (Base), token address, and payment receiver
-- Optional Monero payment details.
-
-Your deployment just needs to expose:
-
-- `GET /health`
-- `GET /manifest`
-
-and host at a stable public URL.
-
----
-
-## HTTP API (Current)
-
-Public endpoints:
-
-- `GET  /health`
-- `GET  /manifest`
-
-Paid skill endpoints (x402 / Monero):
-
-- `POST /skills/threat-scan`
-- `POST /skills/data-removal`
-- `POST /skills/full-privacy-sweep`
-- `POST /skills/opsec-score`
-- `POST /skills/breach-check`
-- `POST /skills/metadata-audit`
-
-See [`server.js`](server.js) for expected request bodies and validation.
-
----
-
-## Python Prototype
-
-`src/search_agent/search_agent.py` is a **standalone research prototype** — it is _not_ integrated with the Node.js HTTP server.  It replicates the same DuckDuckGo search + threat-analysis heuristics that are production-implemented in [`agents/SearchAgent.js`](agents/SearchAgent.js), and is kept here for offline/CLI use and as a reference implementation.
+Use the existing checkout; a cloud task already provides isolation. Do not create another Git worktree for routine setup.
 
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run a manual threat scan
-python src/search_agent/search_agent.py "Full Name"
-# → saves <Full_Name>_threat_analysis.json in the current directory
+npm ci --omit=optional
+npm test
 ```
 
-For production use, call `POST /skills/threat-scan` on the running `server.js` instead.
+The default test suite uses local fixtures and mock facilitator responses; it never makes a payment. `npm run test:demo` is a legacy optional-SDK prototype; it is excluded from the production install and is not production validation.
 
----
+Start with public runtime settings:
 
-## Solana Deployment
+```bash
+PAY_TO=0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6 \
+PUBLIC_URL=https://phantom-operator.onrender.com \
+npm start
+```
 
-PhantomOperator includes a native **Solana BPF/SBF program** written in Rust
-that mirrors the skill catalogue on-chain, accepting SOL payments and recording
-every invocation in a per-operator registry account.
+On Render, set `PAY_TO` in **Environment**; `RENDER_EXTERNAL_URL` supplies the canonical origin unless `PUBLIC_URL` is set. The server reads process variables rather than automatically loading `.env`. For local Node versions supporting it, `node --use-env-proxy --env-file=.env server.js` is available. Never copy example private-key placeholders into this production workflow. The payment receiver is independent from the repository author's identity and from an ERC-8004 token owner.
 
-> **Integration note:** The Solana program is an independent on-chain payment
-> surface.  It does **not** share runtime state with the Node.js HTTP server
-> (`server.js`) — they are two separate entry points into the PhantomOperator
-> skill catalogue:
->
-> | Surface | Runtime | Payment token | Entry point |
-> |---|---|---|---|
-> | HTTP API | Node.js | USDCx on Base (x402) or Monero | `server.js` |
-> | On-chain program | Solana BPF/SBF | SOL (lamports) | `solana/programs/phantom_operator/` |
->
-> A future integration layer (e.g. a shared job queue or cross-chain bridge)
-> will allow either surface to trigger the same privacy-sweep logic.
+The repository lock is now synchronized with its manifest. A direct frozen `npm ci --omit=optional` replaces the earlier cloud-only external-lock workaround. Unused Superfluid and Solana libraries are excluded from the hosted artifact; a full install is only for separately reviewed legacy tooling. Node24 is used in the Render blueprint. No extra database, Solana toolchain, or wallet key is required to serve the enabled API.
 
-### Quick start
+## Use the API
 
-1. **Install prerequisites**
+The public service URL supplied by the operator is `https://phantom-operator.onrender.com`. These examples target that origin; its current deployment must still pass the live verification checklist.
 
-   ```bash
-   # Rust toolchain
-   curl https://sh.rustup.rs -sSf | sh
+```bash
+curl https://phantom-operator.onrender.com/skills
+curl https://phantom-operator.onrender.com/openapi.json
+curl -i https://phantom-operator.onrender.com/skills/metadata-audit \
+  -H 'Content-Type: application/json' \
+  --data '{"url":"https://example.com"}'
+```
 
-   # Solana CLI tool suite
-   sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
-   ```
+Valid unpaid requests return HTTP402 with a base64 `PAYMENT-REQUIRED` header and the equivalent JSON body. A compatible x402 v2 client signs the authorization and retries with `PAYMENT-SIGNATURE`; `X-PAYMENT` is accepted for client compatibility. Input is validated before verification, assessment failures are not settled, and results are released only after a confirmed settlement receipt. If settlement confirmation is interrupted, check your wallet before retrying.
 
-2. **Verify the toolchain**
+Public discovery endpoints:
 
-   ```bash
-   ./solana/scripts/check-solana.sh
-   ```
+- `/` and `/skills/{id}`: human-readable product and skill pages, indexed by ordinary crawlers.
+- `/skills` and `/manifest`: current prices, actual runtime receiver and supported inputs.
+- `/openapi.json`: OpenAPI3.1 HTTP contracts.
+- `/llms.txt`: concise agent integration instructions.
+- `/.well-known/x402`: x402 requirements and Bazaar metadata.
+- `/agent-registration.json`: ERC-8004 registration file.
+- `/.well-known/agent-registration.json`: registration association; remains empty until a real ID and registry are configured.
+- `/robots.txt`, `/sitemap.xml`, `/icon.svg`: crawler guidance and a valid fallback icon.
 
-3. **Build the program**
+An OpenAPI document does not implement MCP or A2A. Neither protocol is advertised as a working service here.
 
-   ```bash
-   ./solana/scripts/build.sh
-   # Compiled binary: solana/deploy/phantom_operator.so
-   ```
+## Verify a deployment
 
-4. **Deploy to devnet**
+```bash
+npm run check-deployment -- https://phantom-operator.onrender.com \
+  --expected-pay-to 0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6
+```
 
-   ```bash
-   ./solana/scripts/deploy.sh --cluster devnet
-   ```
+This performs public GETs and valid unpaid challenges; it does not spend money. A passing preflight does not prove a real paid transaction settled, external search is unblocked, a directory accepted a listing, or an on-chain identity exists. Use the separate skill fixtures and one explicitly approved payment test to establish those properties.
 
-   The script prints the **Program ID**. Add it to your `.env`:
+## Discovery and registration
 
-   ```env
-   SOLANA_PROGRAM_ID=<printed-program-id>
-   ```
+Follow [the launch checklist](docs/DISCOVERY-LAUNCH.md). Register once on a supported chain using the official ERC-8004 workflow, then let compatible explorers index that identity. Do not invent an agent ID or advertise registration before the transaction succeeds.
 
-5. **Initialise the on-chain registry** (once per operator)
+```bash
+npm run prepare-registration -- \
+  --registry VERIFIED_BASE_IDENTITY_REGISTRY \
+  --owner YOUR_PUBLIC_OWNER_ADDRESS \
+  --agent-uri https://phantom-operator.onrender.com/agent-registration.json
+```
 
-   ```bash
-   npm install @solana/web3.js
-   node scripts/solana-invoke.js init-registry
-   ```
+This command prepares an **unsigned** `register(string)` proposal for review in your wallet. It never requests a private key or sends a transaction. Verify the contract in the official ERC-8004 deployment records and block explorer before signing. After registration, configure the real `AGENT_ID` and `AGENT_REGISTRY` on Render and verify the registration URI, token owner, association file and any wallet proof requested by the directory.
 
-6. **Invoke a skill from Node.js**
+`npm run register -- ...` is an unsigned preparation alias. `npm run list-bazaar -- https://phantom-operator.onrender.com` prints discovery links and explicitly does not claim to submit a listing. Old custom registration ABIs and guessed CDP API-key submission flows are not used by this launch workflow.
 
-   ```bash
-   node scripts/solana-invoke.js invoke-skill --skill-id 0 --amount 1000000
-   ```
+## Privacy, reliability and hosting
 
-7. **Deploy to mainnet-beta**
+Read [Terms](TERMS.md) and [the security/privacy review](docs/SECURITY-PRIVACY.md). Search queries go to DuckDuckGo. Metadata audits contact the target page. Render/the network provider can observe request metadata, and Base payment transactions are public. No claim of anonymous payments is made. Application logs avoid search targets and payment proofs; successful settlement events record only the skill, amount, network and public transaction hash.
 
-   ```bash
-   ./solana/scripts/deploy.sh --cluster mainnet-beta
-   ```
+Public-page fetches validate and pin DNS results, block private/special destinations, revalidate redirects, and cap time and response size. Forward proxies without documented DNS-pinning semantics are unsupported for arbitrary metadata targets; the server fails closed rather than bypassing proxy policy. Search uses a fixed provider endpoint. External-provider blocking, throttling and incompleteness remain operational risks.
 
-See **[`solana/README.md`](solana/README.md)** for the full guide, including
-skill IDs, upgrade instructions, environment variables, and troubleshooting.
+Render's free tier can sleep: cold starts can cause crawlers or paying agents to time out. Choose an always-on plan and stable canonical domain before promoting a reliability claim. This is an owner billing decision, not something the software silently enables.
+
+The production dependency audit has no moderate, high or critical findings at review time; 14 low findings remain documented in [the dependency review](docs/DEPENDENCY-REVIEW.md). Optional legacy tools retain additional advisories and are excluded from Render and CI.
+
+Declared package license: MIT. See [LICENSE](LICENSE). Self-hosting source and the HTTP client contract remain available if the hosted endpoint or facilitator becomes unavailable; no user funds are held by this server.

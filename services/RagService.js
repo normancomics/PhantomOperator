@@ -95,17 +95,35 @@ function scoreThreatRelevance(text) {
 }
 
 /**
- * Classify a text passage's threat level using regex + keyword signals.
+ * Explain a text passage's threat level using regex + keyword signals.
  * @param {string} text
- * @returns {'critical'|'high'|'medium'|'benign'}
+ * @returns {{ threatLevel: string, reasons: string[] }}
  */
+function analyzeThreatSignals(text) {
+  const lower = String(text || '').toLowerCase();
+  const reasons = [];
+  if (SSN_RE.test(lower)) reasons.push('ssn');
+  if (PHONE_RE.test(lower)) reasons.push('phone');
+  if (EMAIL_RE.test(lower)) reasons.push('email');
+  const highKeywords = ['address', 'social security', 'ssn', 'date of birth', 'leak', 'breach', 'exposed', 'stolen', 'dump'];
+  for (const keyword of highKeywords) {
+    if (lower.includes(keyword)) reasons.push(`keyword:${keyword}`);
+  }
+  let threatLevel = 'benign';
+  if (reasons.includes('ssn') || reasons.includes('phone')) threatLevel = 'critical';
+  else if (reasons.length > 0) threatLevel = 'high';
+  else {
+    const mediumKeywords = THREAT_KEYWORDS.slice(0, 8).filter(keyword => lower.includes(keyword));
+    if (mediumKeywords.length > 0) {
+      threatLevel = 'medium';
+      reasons.push(...mediumKeywords.map(keyword => `keyword:${keyword}`));
+    }
+  }
+  return { threatLevel, reasons };
+}
+
 function classifyThreatLevel(text) {
-  if (SSN_RE.test(text) || PHONE_RE.test(text)) return 'critical';
-  if (EMAIL_RE.test(text)) return 'high';
-  const lower = text.toLowerCase();
-  if (['leak', 'breach', 'exposed', 'stolen', 'dump'].some(k => lower.includes(k))) return 'high';
-  if (THREAT_KEYWORDS.slice(0, 8).some(k => lower.includes(k))) return 'medium';
-  return 'benign';
+  return analyzeThreatSignals(text).threatLevel;
 }
 
 /**
@@ -115,8 +133,9 @@ function classifyThreatLevel(text) {
  * @returns {Array<{ text: string, source: string }>}
  */
 function chunkDocument(doc) {
-  const raw = `${doc.title || ''}. ${doc.description || ''}`.trim();
-  const sentences = raw.split(/(?<=[.!?])\s+/).filter(s => s.length > 20);
+  const raw = `${doc.title || ''}. ${doc.description || ''}`.trim().slice(0, 8192);
+  // Short sentences can contain an entire phone number or SSN. Keep them.
+  const sentences = raw.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 64);
   if (sentences.length <= 1) return [{ text: raw, source: doc.link }];
 
   const chunks = [];
@@ -137,10 +156,11 @@ function chunkDocument(doc) {
  * @returns {Array<{ text: string, source: string, score: number, threatLevel: string }>}
  */
 function retrieveRelevantPassages(documents, query, options = {}) {
-  const topK = options.topK || 10;
-  const queryTerms = query.toLowerCase().split(/\W+/).filter(t => t.length > 2);
+  const topK = Number.isFinite(options.topK) ? Math.max(0, Math.min(100, Math.floor(options.topK))) : 10;
+  if (topK === 0) return [];
+  const queryTerms = String(query || '').slice(0, 2048).toLowerCase().split(/\W+/).filter(t => t.length > 2).slice(0, 64);
 
-  const passages = documents.flatMap(doc => chunkDocument(doc));
+  const passages = documents.slice(0, 100).flatMap(doc => chunkDocument(doc));
 
   const scored = passages.map(p => ({
     ...p,
@@ -177,4 +197,4 @@ function buildContext(passages) {
     .join('\n');
 }
 
-module.exports = { retrieveRelevantPassages, buildContext, classifyThreatLevel, scoreThreatRelevance };
+module.exports = { retrieveRelevantPassages, buildContext, classifyThreatLevel, analyzeThreatSignals, scoreThreatRelevance };

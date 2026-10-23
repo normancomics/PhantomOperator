@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">PhantomOperator</title>
+  <desc id="desc">A simple shield and eye symbol for the PhantomOperator privacy audit API.</desc>
+  <rect width="256" height="256" rx="48" fill="#101722"/>
+  <path d="M128 38 202 67v59c0 43-31 77-74 96-43-19-74-53-74-96V67Z" fill="#7ce5c2"/>
+  <path d="M76 126c14-21 31-32 52-32s38 11 52 32c-14 21-31 32-52 32s-38-11-52-32Z" fill="#101722"/>
+  <circle cx="128" cy="126" r="17" fill="#7ce5c2"/>
+</svg>

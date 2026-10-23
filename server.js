@@ -1,254 +1,195 @@
-/**
- * server.js
- *
- * PhantomOperator HTTP server, Render-ready, with real x402 v2 payments
- * (plain USDC on Base mainnet, keyless PayAI facilitator, payTo normancomics.eth).
- *
- * Only skills that use free data sources are enabled. No paid API keys needed.
- *
- * Free:
- *   GET  /                 service index
- *   GET  /health           liveness
- *   GET  /manifest         agent-manifest.json
- *   GET  /skills           skill catalog with prices
- *   GET  /terms            terms of use / acceptable use
- *   GET  /llms.txt         agent-readable index
- *   GET  /.well-known/x402 x402 resource list
- * Paid (x402, POST JSON):
- *   POST /skills/metadata-audit  $0.05  HTTP/HTML metadata privacy audit of a URL
- *   POST /skills/threat-scan     $0.10  public-web PII exposure scan for a name (self/authorized only)
- *   POST /skills/opsec-score     $0.25  multi-vector OPSEC exposure score (self/authorized only)
- *
- * Disabled on this deployment (see README): breach-check (needs paid HIBP key),
- * data-removal (was a stub that didn't submit anything), full-privacy-sweep
- * (needs a funded wallet private key + Superfluid), Solana and Python tooling.
- */
 'use strict';
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-
-const SearchAgent   = require('./agents/SearchAgent');
-const OpsecAgent    = require('./agents/OpsecAgent');
-const MetadataAgent = require('./agents/MetadataAgent');
-const manifest      = require('./agent-manifest.json');
-const x402          = require('./lib/x402');
-const {
-  checkRateLimit, setSecurityHeaders, sanitizeString, isValidEmail, isValidHttpUrl,
-  RATE_LIMIT_PUBLIC, RATE_LIMIT_PAID, MAX_BODY_BYTES,
-} = require('./middleware/security');
-
-const PORT = process.env.PORT || 3000;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const { randomUUID } = require('crypto');
+const manifest = require('./agent-manifest.json');
+const paymentDefault = require('./lib/x402');
+const { createDiscovery } = require('./lib/discovery');
+const defaultAgents = { SearchAgent: require('./agents/SearchAgent'), OpsecAgent: require('./agents/OpsecAgent'), MetadataAgent: require('./agents/MetadataAgent') };
+const { checkRateLimit, setSecurityHeaders, sanitizeString, isValidEmail, isValidHttpUrl, RATE_LIMIT_PUBLIC, RATE_LIMIT_PAID, MAX_BODY_BYTES } = require('./middleware/security');
 const TERMS = fs.readFileSync(path.join(__dirname, 'TERMS.md'), 'utf8');
-
-const publicBase = (req) => {
-  const env = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
-  if (env) return env.replace(/\/$/, '');
-  const proto = req.headers['x-forwarded-proto'] || 'http';
-  return `${proto}://${req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`}`;
-};
-
-const CONSENT = { type: 'boolean', description: 'Must be true: you confirm the target is yourself or someone who authorized this scan, and you accept /terms' };
-
-// ── Paid skills ──────────────────────────────────────────────────────────────
-const SKILLS = {
-  'metadata-audit': {
-    path: '/skills/metadata-audit', priceUsd: 0.05,
-    description: 'Privacy audit of a web page: leaky HTTP headers, meta tags, HTML comments, third-party trackers and resources, with a risk rating and recommendations.',
-    bodySchema: { type: 'object', properties: { url: { type: 'string', description: 'Absolute http(s) URL to audit' } }, required: ['url'] },
-    inputExample: { url: 'https://example.com' },
-    outputExample: { skill: 'metadata-audit', result: { overallRisk: 'low', findings: [] } },
-    async run(body) {
-      const url = sanitizeString(body.url, 2048);
-      if (!url || !isValidHttpUrl(url)) return { status: 400, body: { error: 'url must be an absolute HTTP/HTTPS URL' } };
-      return { status: 200, body: { skill: 'metadata-audit', result: await MetadataAgent.audit(url) } };
-    },
-  },
-  'threat-scan': {
-    path: '/skills/threat-scan', priceUsd: 0.10, requiresConsent: true,
-    description: "Searches the public web (DuckDuckGo) for a person's name and flags results exposing PII (phone, email, address keywords). For self-assessment or authorized use only.",
-    bodySchema: { type: 'object', properties: { fullName: { type: 'string', description: 'Full name to scan' }, consent: CONSENT }, required: ['fullName', 'consent'] },
-    inputExample: { fullName: 'Jane Example', consent: true },
-    outputExample: { skill: 'threat-scan', result: [{ title: '...', link: 'https://...', threatLevel: 'high', reasons: ['email'] }] },
-    async run(body) {
-      const fullName = sanitizeString(body.fullName);
-      if (!fullName) return { status: 400, body: { error: 'fullName is required' } };
-      return { status: 200, body: { skill: 'threat-scan', result: await SearchAgent.run({ fullName }) } };
-    },
-  },
-  'opsec-score': {
-    path: '/skills/opsec-score', priceUsd: 0.25, requiresConsent: true,
-    description: 'Multi-vector OPSEC exposure score (0-100) for a name, handle and/or email from public web search results, with prioritized recommendations. For self-assessment or authorized use only.',
-    bodySchema: { type: 'object', properties: { fullName: { type: 'string' }, handle: { type: 'string' }, email: { type: 'string' }, consent: CONSENT }, required: ['consent'] },
-    inputExample: { handle: 'janeexample', consent: true },
-    outputExample: { skill: 'opsec-score', result: { score: 42, riskLevel: 'medium', vectors: {} } },
-    async run(body) {
-      const target = {};
-      if (body.fullName) target.fullName = sanitizeString(body.fullName);
-      if (body.handle) target.handle = sanitizeString(body.handle);
-      if (body.email) {
-        const e = sanitizeString(body.email);
-        if (!isValidEmail(e)) return { status: 400, body: { error: 'Invalid email address' } };
-        target.email = e;
-      }
-      if (!target.fullName && !target.handle && !target.email) return { status: 400, body: { error: 'At least one of fullName, handle, or email is required' } };
-      return { status: 200, body: { skill: 'opsec-score', result: await OpsecAgent.assess(target) } };
-    },
-  },
-};
-
+const CONSENT = { type: 'boolean', const: true, description: 'You confirm the target is yourself or explicitly authorized this assessment, and accept /terms.' };
+const text = (description, maxLength = 512) => ({ type: 'string', minLength: 1, maxLength, description });
 const DISABLED = {
-  'breach-check': 'Disabled: email breach lookup requires a paid HaveIBeenPwned API key.',
-  'data-removal': 'Disabled: opt-out submission is not implemented yet (previous version only returned a stub).',
-  'full-privacy-sweep': 'Disabled: requires a funded wallet private key and Superfluid streaming.',
+  'breach-check': 'Disabled: paid email-breach data integration is not configured.',
+  'data-removal': 'Disabled: automated broker opt-out submission is not implemented.',
+  'full-privacy-sweep': 'Disabled: automated removal and funded streaming are not offered by this deployment.',
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function send(res, status, body, headers = {}) {
-  const isText = typeof body === 'string';
-  const data = isText ? body : JSON.stringify(body, null, 2);
-  res.writeHead(status, {
-    'Content-Type': isText ? 'text/plain; charset=utf-8' : 'application/json',
-    'Content-Length': Buffer.byteLength(data),
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE',
-    ...headers,
-  });
-  res.end(data);
+function createSkills(agents) {
+  return {
+    'metadata-audit': {
+      path: '/skills/metadata-audit', priceUsd: 0.05, tags: ['privacy', 'metadata', 'http-headers', 'web-security'],
+      description: 'Inspect a public web page for metadata exposure, software fingerprints, third-party resources and missing security headers. Returns evidence and practical remediation; does not inspect image EXIF.',
+      bodySchema: { type: 'object', properties: { url: { ...text('Public HTTP/HTTPS page to audit', 2048), format: 'uri' } }, required: ['url'], additionalProperties: false },
+      inputExample: { url: 'https://example.com' },
+      outputExample: { skill: 'metadata-audit', result: { overallRisk: 'medium', findingCounts: { critical: 0, high: 0, medium: 1, low: 0 }, findings: [{ category: 'missing-security-header', riskLevel: 'medium', label: 'Missing security header', field: 'referrer-policy', value: null }], recommendation: 'Review the observed headers.' } },
+      async run(body) { return agents.MetadataAgent.audit(body.url); },
+    },
+    'threat-scan': {
+      path: '/skills/threat-scan', priceUsd: 0.10, requiresConsent: true, tags: ['privacy', 'pii', 'authorized-osint', 'evidence'],
+      description: 'Classify public search-result snippets for possible phone, email and sensitive-keyword exposure for yourself or an authorized client. Returns source links and heuristic reasons; name matches are not identity verification.',
+      bodySchema: { type: 'object', properties: { fullName: text('Name of yourself or an explicitly authorized subject'), consent: CONSENT }, required: ['fullName', 'consent'], additionalProperties: false },
+      inputExample: { fullName: 'Jane Example', consent: true },
+      outputExample: { skill: 'threat-scan', result: [{ title: 'Example public page', link: 'https://example.com/profile', description: 'Example snippet', threatLevel: 'high', reasons: ['email'] }] },
+      async run(body) { return agents.SearchAgent.run({ fullName: body.fullName }); },
+    },
+    'opsec-score': {
+      path: '/skills/opsec-score', priceUsd: 0.25, requiresConsent: true, tags: ['opsec', 'privacy', 'exposure-assessment', 'authorized-osint'],
+      description: 'Assess public search exposure for a consenting name, handle or email, with evidence, heuristic score breakdown, coverage and prioritized remediation. Failed searches are not treated as proof of privacy.',
+      bodySchema: { type: 'object', properties: { fullName: text('Authorized subject name'), handle: text('Authorized public handle'), email: { ...text('Authorized email', 254), format: 'email' }, consent: CONSENT }, required: ['consent'], anyOf: [{ required: ['fullName'] }, { required: ['handle'] }, { required: ['email'] }], additionalProperties: false },
+      inputExample: { handle: 'janeexample', consent: true },
+      outputExample: { skill: 'opsec-score', result: { score: 42, grade: 'C', breakdown: { searchExposure: { score: 40, criticalFindings: 1, highFindings: 1, totalResults: 5 }, dataBrokerExposure: { score: 40, brokerCount: 2, brokers: ['example.com'] }, pasteLeaks: { score: 40, pasteCount: 1, sites: [] }, socialFootprint: { score: 48, platformCount: 4, platforms: [] } }, recommendations: [{ priority: 'HIGH', action: 'Review source evidence', detail: 'Verify the linked result and request correction where appropriate.' }], coverage: { complete: true } } },
+      async run(body) { const target = {}; for (const key of ['fullName', 'handle', 'email']) if (body[key]) target[key] = body[key]; return agents.OpsecAgent.assess(target); },
+    },
+  };
+}
+
+function validateBody(id, body, skill) {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return 'Body must be a JSON object';
+  const allowed = new Set(Object.keys(skill.bodySchema.properties));
+  if (Object.keys(body).some(key => !allowed.has(key))) return 'Body contains an unsupported property';
+  if (skill.requiresConsent && body.consent !== true) return 'consent must be true (self-assessment or explicit authorization; see /terms)';
+  for (const [key, spec] of Object.entries(skill.bodySchema.properties)) {
+    if (spec.type !== 'string' || body[key] === undefined) continue;
+    if (typeof body[key] !== 'string' || !body[key].trim() || body[key].length > spec.maxLength || /[\x00-\x1F\x7F]/.test(body[key])) return `${key} must be a nonempty string of at most ${spec.maxLength} characters`;
+    body[key] = sanitizeString(body[key], spec.maxLength);
+  }
+  if (id === 'metadata-audit') {
+    if (!body.url || !isValidHttpUrl(body.url)) return 'url must be an absolute HTTP/HTTPS URL';
+    const parsed = new URL(body.url);
+    if (parsed.username || parsed.password) return 'URLs containing credentials are not supported';
+  }
+  if (id === 'threat-scan' && !body.fullName) return 'fullName is required';
+  if (id === 'opsec-score') {
+    if (!body.fullName && !body.handle && !body.email) return 'At least one of fullName, handle, or email is required';
+    if (body.email && !isValidEmail(body.email)) return 'Invalid email address';
+  }
+  return null;
 }
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    const chunks = []; let total = 0;
-    req.on('data', (c) => {
-      total += c.length;
-      if (total > MAX_BODY_BYTES) { req.destroy(); return reject(new Error(`Request body exceeds ${MAX_BODY_BYTES} bytes`)); }
-      chunks.push(c);
+    const chunks = []; let size = 0; let failed = false;
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        if (!failed) {
+          failed = true;
+          chunks.length = 0;
+          req.pause();
+          reject(Object.assign(new Error('Request body too large'), { statusCode: 413 }));
+        }
+        return;
+      }
+      if (!failed) chunks.push(chunk);
     });
-    req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { reject(new Error('Invalid JSON body')); } });
+    req.on('end', () => { if (failed) return; try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { reject(new Error('Invalid JSON body')); } });
     req.on('error', reject);
   });
 }
 
-const clientIp = (req) => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+function canonicalBase(value) {
+  const parsed = new URL(value);
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') throw new Error('PUBLIC_URL must be an HTTP(S) origin, without path, query or credentials');
+  return parsed.origin;
+}
 
-function catalog(base) {
-  return {
-    paid: Object.entries(SKILLS).map(([id, s]) => ({
-      id, method: 'POST', url: base + s.path, priceUsd: s.priceUsd, description: s.description,
-      body: s.bodySchema, requiresConsent: !!s.requiresConsent,
-    })),
-    disabled: DISABLED,
-    payment: { protocol: 'x402 v2', scheme: 'exact', network: x402.NETWORK, asset: x402.USDC_BASE, payTo: x402.PAY_TO, facilitator: x402.FACILITATOR },
-    terms: base + '/terms',
+function createServer({ payment = paymentDefault, agents = defaultAgents, publicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL, registration = { agentId: process.env.AGENT_ID, agentRegistry: process.env.AGENT_REGISTRY } } = {}) {
+  const skills = createSkills(agents);
+  const instance = randomUUID();
+  const configuredBase = publicUrl ? canonicalBase(publicUrl) : null;
+  const trustProxy = process.env.RENDER === 'true' || process.env.TRUST_PROXY === 'true';
+  const runtimePayment = { protocol: 'x402', x402Version: 2, scheme: 'exact', network: payment.NETWORK, asset: payment.USDC_BASE, payTo: payment.PAY_TO, facilitator: payment.FACILITATOR };
+  const baseFor = req => {
+    if (configuredBase) return configuredBase;
+    const host = req.headers.host;
+    if (!host || !/^[a-zA-Z0-9.\-:[\]]+$/.test(host)) throw new Error('Invalid Host header');
+    return canonicalBase(`http://${host}`);
   };
-}
-
-function llms(base) {
-  return [
-    '# PhantomOperator',
-    '',
-    '> Privacy and OPSEC agent. Audits web pages for metadata leaks and scores public-web PII exposure for yourself (or someone who authorized you). Pay per call via x402 (USDC on Base mainnet, payTo normancomics.eth). See terms before use.',
-    '',
-    '## Free',
-    `- [Skill catalog](${base}/skills)`,
-    `- [Agent manifest](${base}/manifest)`,
-    `- [Official logo](${base}/logo.png)`,
-    `- [Terms of use](${base}/terms)`,
-    `- [x402 resources](${base}/.well-known/x402)`,
-    '',
-    '## Paid (x402 v2, exact, eip155:8453 USDC; POST JSON)',
-    ...Object.values(SKILLS).map((s) => `- [POST ${s.path}](${base}${s.path}) $${s.priceUsd.toFixed(2)}: ${s.description}`),
-    '',
-    'Unpaid requests return HTTP 402 with a PAYMENT-REQUIRED header. Pay with any x402 client (PAYMENT-SIGNATURE or X-PAYMENT header). Errors and invalid input are not charged. threat-scan and opsec-score require "consent": true.',
-    '',
-  ].join('\n');
-}
-
-async function handlePaid(req, res, id) {
-  const skill = SKILLS[id];
-  const base = publicBase(req);
-  let body;
-  try { body = await readBody(req); } catch (e) { return send(res, 400, { error: e.message }); }
-
-  // Validate cheap preconditions before asking for payment so nobody pays for a rejected request.
-  if (skill.requiresConsent && body && Object.keys(body).length && body.consent !== true) {
-    return send(res, 400, { error: 'consent must be true (target is yourself or authorized you; you accept the terms)', terms: base + '/terms' });
+  function catalog(base) {
+    return { paid: Object.entries(skills).map(([id, s]) => ({ id, method: 'POST', url: base + s.path, priceUsd: s.priceUsd, description: s.description, body: s.bodySchema, requiresConsent: !!s.requiresConsent, example: s.inputExample })), disabled: DISABLED, payment: runtimePayment, terms: base + '/terms', logo: base + '/icon.svg', openapi: base + '/openapi.json' };
   }
-
-  const v = await x402.verify(req, skill, base);
-  if (!v.ok) return send(res, v.status, v.body, v.headers);
-  if (skill.requiresConsent && body.consent !== true) {
-    return send(res, 400, { error: 'consent must be true', terms: base + '/terms' }); // not charged
+  function runtimeManifest(base) {
+    return { ...manifest, image: base + '/icon.svg', logo: base + '/icon.svg', website: base, payment: { ...runtimePayment, terms: base + '/terms' }, skills: Object.entries(skills).map(([id, s]) => {
+      const { inputs, outputs, ...identity } = manifest.skills.find(item => item.id === id) || {};
+      return { ...identity, id, description: s.description, tags: s.tags, endpoint: base + s.path, method: 'POST', inputSchema: s.bodySchema, example: s.inputExample, outputExample: s.outputExample, requiresConsent: !!s.requiresConsent, pricing: { perCallAmount: payment.requirements(s).amount, token: 'USDC', tokenAddress: payment.USDC_BASE, protocol: 'x402 v2 exact', network: payment.NETWORK } };
+    }), discovery: { openapi: base + '/openapi.json', agentRegistration: base + '/agent-registration.json', llms: base + '/llms.txt' } };
   }
-
-  let out;
-  try { out = await skill.run(body); }
-  catch (err) {
-    console.error(`Skill error [${id}]:`, err.message);
-    return send(res, 500, { error: IS_PRODUCTION ? 'An internal error occurred' : err.message }); // not charged
-  }
-  if (out.status >= 400) return send(res, out.status, out.body); // not charged
-
-  const s = await x402.settle(v.payload, skill);
-  if (!s.ok) return send(res, s.status, s.body);
-  send(res, 200, out.body, s.headers);
-}
-
-// ── HTTP server ──────────────────────────────────────────────────────────────
-const server = http.createServer(async (req, res) => {
-  setSecurityHeaders(res);
-  const url = req.url.split('?')[0];
-  const ip = clientIp(req);
-  const base = publicBase(req);
-
-  try {
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' });
-      return res.end();
-    }
-    if (req.method === 'GET') {
-      const rl = checkRateLimit(ip, RATE_LIMIT_PUBLIC);
-      if (!rl.allowed) return send(res, 429, { error: 'Too many requests', retryAfter: rl.retryAfter }, { 'Retry-After': String(rl.retryAfter) });
-      switch (url) {
-        case '/': return send(res, 200, { service: 'PhantomOperator', description: manifest.description, ...catalog(base), discovery: { llms: base + '/llms.txt', x402: base + '/.well-known/x402', manifest: base + '/manifest', logo: base + '/logo.png' } });
-        case '/health': return send(res, 200, { status: 'ok', agent: manifest.name, version: manifest.version });
-        case '/manifest': return send(res, 200, { ...manifest, image: base + '/logo.png', logo: base + '/logo.png', payment: { ...manifest.payment, payTo: x402.PAY_TO } });
-        case '/skills': return send(res, 200, { ...catalog(base), logo: base + '/logo.png' });
-        case '/logo.png': {
-          const image = fs.readFileSync(path.join(__dirname, 'assets', 'phantom-operator-logo.png'));
-          res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': image.length, 'Cache-Control': 'public, max-age=3600' });
-          return res.end(image);
-        }
-        case '/terms': return send(res, 200, TERMS);
-        case '/llms.txt': return send(res, 200, llms(base));
-        case '/.well-known/x402': return send(res, 200, {
-          x402Version: 2, facilitator: x402.FACILITATOR, network: x402.NETWORK, asset: x402.USDC_BASE, payTo: x402.PAY_TO,
-          resources: Object.values(SKILLS).map((s) => ({ resource: base + s.path, method: 'POST', description: s.description, priceUsd: s.priceUsd, accepts: [x402.requirements(s)] })),
-        });
+  return http.createServer({ requestTimeout: 15000, headersTimeout: 10000, keepAliveTimeout: 5000 }, async (req, res) => {
+    setSecurityHeaders(res);
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
+    const send = (status, body, headers = {}) => {
+      const data = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+      res.writeHead(status, { 'Content-Type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(data), 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE', ...headers });
+      res.end(req.method === 'HEAD' ? undefined : data);
+    };
+    try {
+      const base = baseFor(req);
+      const url = new URL(req.url, base).pathname;
+      const peer = req.socket.remoteAddress || 'unknown';
+      const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(value => value.trim()).filter(Boolean);
+      const ip = trustProxy && forwarded.length ? forwarded[forwarded.length - 1] : peer;
+      if (req.method === 'OPTIONS') return send(204, '', { 'Access-Control-Allow-Headers': 'Content-Type, PAYMENT-SIGNATURE, X-PAYMENT', 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS' });
+      if (req.method === 'GET' || req.method === 'HEAD') {
+        const rate = checkRateLimit(`${instance}:public:${ip}`, RATE_LIMIT_PUBLIC);
+        if (!rate.allowed) return send(429, { error: 'Too many requests', retryAfter: rate.retryAfter }, { 'Retry-After': String(rate.retryAfter) });
+        if (url === '/health') return send(200, { status: 'ok', agent: manifest.name, version: manifest.version });
+        if (url === '/skills') return send(200, catalog(base));
+        if (url === '/manifest') return send(200, runtimeManifest(base));
+        if (url === '/terms') return send(200, TERMS);
+        if (url === '/logo.png') return send(302, '', { Location: base + '/icon.svg' });
+        if (url === '/.well-known/x402') return send(200, { x402Version: 2, ...runtimePayment, resources: Object.values(skills).map(s => ({ resource: base + s.path, method: 'POST', description: s.description, priceUsd: s.priceUsd, accepts: [payment.requirements(s)], extensions: payment.paymentRequired(s, base).extensions })) });
+        const route = createDiscovery({ base, manifest: runtimeManifest(base), skills, payment: runtimePayment, registration }).route(url);
+        if (route) return send(route.status, route.body, { 'Content-Type': route.contentType });
       }
+      if (req.method === 'POST' && url.startsWith('/skills/')) {
+        const id = url.slice('/skills/'.length);
+        if (DISABLED[id]) return send(410, { error: DISABLED[id] });
+        const skill = skills[id];
+        if (!skill) return send(404, { error: 'Unknown skill', available: Object.keys(skills) });
+        const rate = checkRateLimit(`${instance}:paid:${ip}`, RATE_LIMIT_PAID);
+        if (!rate.allowed) return send(429, { error: 'Too many requests', retryAfter: rate.retryAfter }, { 'Retry-After': String(rate.retryAfter) });
+        const type = req.headers['content-type'];
+        if (type && !/^application\/json(?:\s*;|$)/i.test(type)) return send(415, { error: 'Use Content-Type: application/json' });
+        let body;
+        try { body = await readBody(req); } catch (error) {
+          if (error.statusCode === 413) {
+            res.once('finish', () => req.socket.destroySoon());
+            return send(413, { error: error.message }, { Connection: 'close' });
+          }
+          return send(error.statusCode || 400, { error: error.message });
+        }
+        const invalid = validateBody(id, body, skill);
+        if (invalid) return send(400, { error: invalid, terms: base + '/terms' });
+        const verified = await payment.verify(req, skill, base);
+        if (!verified.ok) return send(verified.status, verified.body, verified.headers);
+        let result;
+        try { result = await skill.run(body); }
+        catch (error) {
+          console.error(`Skill failed [${id}] code=${error.code || 'UPSTREAM_FAILED'}`);
+          const status = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode <= 599 ? error.statusCode : 502;
+          return send(status, { error: error.code === 'UNSAFE_TARGET' ? 'The target is not a permitted public web address' : 'The assessment could not be completed; no payment was settled by this request', code: error.code || 'UPSTREAM_FAILED' });
+        }
+        const settled = await payment.settle(verified.payload, skill);
+        if (!settled.ok) return send(settled.status, settled.body);
+        console.log(JSON.stringify({ event: 'skill_settled', skill: id, amount: payment.requirements(skill).amount, network: payment.NETWORK, transaction: settled.receipt?.transaction || null }));
+        return send(200, { skill: id, result }, settled.headers);
+      }
+      return send(404, { error: 'Not found', hint: 'See /skills or /openapi.json' });
+    } catch (error) {
+      console.error('Request failed:', error.code || 'INTERNAL_ERROR');
+      if (!res.headersSent) send(500, { error: 'Internal server error' });
+      else res.end();
     }
+  });
+}
 
-    if (req.method === 'POST' && url.startsWith('/skills/')) {
-      const id = url.slice('/skills/'.length);
-      if (DISABLED[id]) return send(res, 410, { error: DISABLED[id] });
-      if (!SKILLS[id]) return send(res, 404, { error: 'Unknown skill', available: Object.keys(SKILLS) });
-      const rl = checkRateLimit(ip, RATE_LIMIT_PAID);
-      if (!rl.allowed) return send(res, 429, { error: 'Too many requests', retryAfter: rl.retryAfter }, { 'Retry-After': String(rl.retryAfter) });
-      return await handlePaid(req, res, id);
-    }
-
-    send(res, 404, { error: 'Not found', hint: 'See GET / for available endpoints' });
-  } catch (err) {
-    console.error('Unhandled error:', err.message);
-    send(res, 500, { error: 'Internal server error' });
-  }
-});
-
-server.listen(PORT, () => {
-  console.log(`PhantomOperator listening on :${PORT}`);
-  for (const s of Object.values(SKILLS)) console.log(`  POST ${s.path}  $${s.priceUsd.toFixed(2)} USDC (x402, Base)`);
-  console.log(`  payTo ${x402.PAY_TO} via ${x402.FACILITATOR}`);
-});
+if (require.main === module) {
+  const port = Number(process.env.PORT || 3000);
+  const server = createServer();
+  server.listen(port, () => console.log(`PhantomOperator listening on :${port}\npayTo ${paymentDefault.PAY_TO} via ${paymentDefault.FACILITATOR}`));
+}
+module.exports = { createServer, createSkills, validateBody };
