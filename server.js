@@ -494,7 +494,7 @@ async function handlePaidSkill(req, res, skillId) {
 
       // Use OrchestratorOperator as the core coordinator for sweeps.
       const operator = new OrchestratorOperator();
-      await operator.startDataRemovalTask({
+      const sweepResult = await operator.startDataRemovalTask({
         fullName,
         walletAddress: sanitizeString(body.walletAddress) || PAYMENT_RECEIVER,
         flowRate:      sanitizeString(body.flowRate) ||
@@ -503,8 +503,8 @@ async function handlePaidSkill(req, res, skillId) {
       });
 
       result = {
-        status:  'sweep-complete',
-        message: 'Full privacy sweep finished.',
+        status: 'sweep-complete',
+        ...sweepResult,
       };
 
     } else if (skillId === 'opsec-score') {
