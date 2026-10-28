@@ -1,5 +1,12 @@
 # PhantomOperator
 
+[![Live service](https://img.shields.io/badge/live-freysaai.freysa.dev-00b894?style=flat-square)](https://freysaai.freysa.dev/status)
+[![x402](https://img.shields.io/badge/x402-Base%20native%20USDC-0052FF?style=flat-square)](https://freysaai.freysa.dev/.well-known/x402)
+[![MCP](https://img.shields.io/badge/MCP-remote%20server-7C3AED?style=flat-square)](https://freysaai.freysa.dev/mcp)
+[![A2A](https://img.shields.io/badge/A2A-agent%20card-FF6B35?style=flat-square)](https://freysaai.freysa.dev/.well-known/agent-card.json)
+[![ERC--8004](https://img.shields.io/badge/ERC--8004-agent%20%23821239-627EEA?style=flat-square)](https://freysaai.freysa.dev/.well-known/agent-registration.json)
+[![License](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
+
 **PhantomOperator** is a pay-per-call privacy and public-exposure analysis service for authorized users and AI agents. It provides structured checks for web metadata leakage, public-web exposure, breach indicators, privacy posture, and wallet hygiene.
 
 > **Authorization required:** Only assess URLs, identities, email addresses, wallets, and systems you own or are expressly authorized to assess. Do not submit seed phrases, passwords, API keys, or other secrets.

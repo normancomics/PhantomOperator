@@ -1,0 +1,24 @@
+name: Integration request
+description: Request an SDK, marketplace, agent framework, or protocol integration.
+title: "integration: "
+labels: [integration]
+body:
+  - type: input
+    id: platform
+    attributes:
+      label: Platform or framework
+      placeholder: Example: an MCP client, x402 SDK, A2A host, or marketplace
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Authorized use case
+      description: Explain the legitimate workflow and which PhantomOperator operation you need.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Technical details
+      description: Include expected inputs/outputs, links, and any error text. Do not include secrets or payment credentials.
