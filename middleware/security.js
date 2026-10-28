@@ -119,6 +119,12 @@ const paidLimiter = createRateLimiter({
   max: parseInt(process.env.RATE_LIMIT_PAID || '20', 10),
 });
 
+// Free previews trigger outbound URL fetches, so keep their per-client budget low.
+const previewLimiter = createRateLimiter({
+  windowMs: 60 * 60_000,
+  max: parseInt(process.env.RATE_LIMIT_PREVIEW || '5', 10),
+});
+
 // ─── Input Validation Helpers ────────────────────────────────────────────────
 
 const EMAIL_RE       = /^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/;
@@ -282,6 +288,7 @@ module.exports = {
   createRateLimiter,
   publicLimiter,
   paidLimiter,
+  previewLimiter,
   validateSkillInput,
   isValidHttpUrl,
   EMAIL_RE,

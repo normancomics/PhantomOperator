@@ -63,6 +63,7 @@ const {
   bodySizeGuard,
   publicLimiter,
   paidLimiter,
+  previewLimiter,
   validateSkillInput,
 } = require('./middleware/security');
 
@@ -875,7 +876,7 @@ app.get('/robots.txt', publicLimiter, (req, res) => {
 
 app.get('/sitemap.xml', publicLimiter, (req, res) => {
   const b = baseUrl(req);
-  const urls = ['/', '/app', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
+  const urls = ['/', '/app', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/preview/metadata-audit', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
   res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${b}${u}</loc></url>`).join('')}</urlset>`);
 });
 
@@ -921,6 +922,28 @@ app.get('/terms', publicLimiter, (_req, res) => {
 
 app.get('/logo.png', publicLimiter, (_req, res) => {
   res.type('image/png').sendFile(path.join(__dirname, 'assets', 'phantom-operator-logo.png'));
+});
+
+// ─── Free evaluation endpoints ──────────────────────────────────────────────
+
+app.post('/preview/metadata-audit', previewLimiter, async (req, res) => {
+  const url = req.body && req.body.url;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url is required.' });
+  try {
+    const report = await MetadataAgent.audit(url.trim());
+    // Preview proves usefulness without returning a full paid report or raw page details.
+    const previewFindings = report.findings.slice(0, 3).map(({ category, riskLevel, label, field }) => ({ category, riskLevel, label, field }));
+    return res.json({
+      preview: true,
+      url: report.url,
+      statusCode: report.statusCode,
+      overallRisk: report.overallRisk,
+      findingCounts: report.findingCounts,
+      findings: previewFindings,
+      findingsTruncated: report.findings.length > previewFindings.length,
+      limits: { perClientPerHour: Number(process.env.RATE_LIMIT_PREVIEW || '5'), fullDetailsRequire: 'POST /skills/metadata-audit via Base USDC x402 or POST /mpp/skills/metadata-audit via MPP Tempo' },
+    });
+  } catch (err) { return res.status(400).json({ error: `Preview unavailable: ${err.message}` }); }
 });
 
 // ─── Free Live Demo Endpoint (`POST /demo/monero-decode`) ────────────────────

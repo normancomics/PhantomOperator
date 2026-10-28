@@ -23,6 +23,7 @@ Initialize at `POST /mcp`, call `tools/list`, then call a named tool. The respon
 
 ## Free evaluation
 
+- `POST /preview/metadata-audit` accepts `{ "url": "https://example.com" }` and returns a limited, rate-controlled metadata summary (5 previews/client/hour).
 - `/sample-report` shows the shape and limitations of a sample privacy report.
 - `/demo/monero-decode` returns a free address-decoding preview.
 - `/usage` shows privacy-preserving aggregate, settled-service telemetry.
