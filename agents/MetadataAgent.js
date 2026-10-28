@@ -26,6 +26,7 @@
 
 const axios   = require('axios');
 const cheerio = require('cheerio');
+const dns     = require('node:dns').promises;
 
 const USER_AGENT = 'PhantomOperator-MetaAudit/1.0 (https://github.com/normancomics/PhantomOperator)';
 const REQUEST_TIMEOUT_MS = 15000;
@@ -37,13 +38,18 @@ const REQUEST_TIMEOUT_MS = 15000;
 const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.|0\.|::1|fc|fd)/i;
 const PRIVATE_HOST_RE = /^(localhost|.*\.local|.*\.internal|metadata\.google\.internal)$/i;
 
+function isPrivateIp(address) {
+  const a = String(address || '').toLowerCase();
+  return PRIVATE_IP_RE.test(a) || a === '::' || a === '::1' || a.startsWith('fe80:') || a.startsWith('fc') || a.startsWith('fd');
+}
+
 /**
  * Throw if the URL targets a private, loopback, or otherwise disallowed host.
  * This is a best-effort static guard — runtime DNS rebinding is not prevented
  * here but should be addressed at the network layer for production deployments.
  * @param {string} rawUrl
  */
-function assertSafeUrl(rawUrl) {
+async function assertSafeUrl(rawUrl) {
   let parsed;
   try { parsed = new URL(rawUrl); } catch { throw new Error('Invalid URL'); }
 
@@ -55,6 +61,14 @@ function assertSafeUrl(rawUrl) {
   if (PRIVATE_HOST_RE.test(host) || PRIVATE_IP_RE.test(host)) {
     throw new Error('Requests to private or internal network addresses are not permitted');
   }
+  // Resolve before connecting and reject a hostname that maps to a private
+  // address. `_fetch` pins this approved result for the request so a later DNS
+  // response cannot redirect the server into its private network.
+  const answers = await dns.lookup(host, { all: true, verbatim: true });
+  if (!answers.length || answers.some((answer) => isPrivateIp(answer.address))) {
+    throw new Error('Requests resolving to private or internal network addresses are not permitted');
+  }
+  return { parsed, answers };
 }
 
 // ── Risk classification rules ─────────────────────────────────────────────────
@@ -117,10 +131,10 @@ class MetadataAgent {
    */
   static async audit(targetUrl) {
     // SSRF guard — must run before any network call
-    assertSafeUrl(targetUrl);
+    const safeTarget = await assertSafeUrl(targetUrl);
 
     const { responseHeaders, body, finalUrl, statusCode } =
-      await MetadataAgent._fetch(targetUrl);
+      await MetadataAgent._fetch(targetUrl, safeTarget);
 
     const headerFindings  = MetadataAgent._analyseHeaders(responseHeaders);
     const $ = cheerio.load(body);
@@ -157,11 +171,16 @@ class MetadataAgent {
 
   // ── Private: HTTP fetch ─────────────────────────────────────────────────────
 
-  static async _fetch(url) {
+  static async _fetch(url, safeTarget) {
+    const address = safeTarget.answers[0];
+    const lookup = (_hostname, _options, callback) => callback(null, address.address, address.family);
     const resp = await axios.get(url, {
       headers:          { 'User-Agent': USER_AGENT },
       timeout:          REQUEST_TIMEOUT_MS,
-      maxRedirects:     5,
+      // Do not follow redirects: a public URL could redirect to an internal
+      // address after the initial safe DNS resolution.
+      maxRedirects:     0,
+      lookup,
       validateStatus:   () => true, // capture any status code
       responseType:     'text',
       maxContentLength: 2 * 1024 * 1024, // 2 MB cap
