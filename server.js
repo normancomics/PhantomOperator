@@ -651,6 +651,12 @@ app.get('/.well-known/402index-verify.txt', (_req, res) => {
   res.type('text/plain').send('01c6c7fe92a9ddae4370753deb04b150a0495af525725acdd6aaeb01ae8a6c96');
 });
 
+app.get('/.well-known/agent-tools-verify.txt', (_req, res) => {
+  const token = process.env.AGENT_TOOLS_VERIFY;
+  if (!token) return res.status(404).type('text/plain').send('Not configured');
+  return res.type('text/plain').send(`${token}\n`);
+});
+
 app.get('/.well-known/x402', publicLimiter, (req, res) => {
   const b = baseUrl(req);
   const routes = Object.values(ROUTES);
