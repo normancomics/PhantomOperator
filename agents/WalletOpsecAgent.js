@@ -28,11 +28,11 @@ const ERC721_ABI = [
 
 async function audit(params = {}) {
   const rawAddress = String(params.walletAddress || params.address || '').trim();
-  if (!ethers.utils.isAddress(rawAddress)) {
+  if (!ethers.isAddress(rawAddress)) {
     throw new Error('walletAddress must be a valid 0x EVM address');
   }
-  const address = ethers.utils.getAddress(rawAddress);
-  const provider = new ethers.providers.JsonRpcProvider(BASE_RPC);
+  const address = ethers.getAddress(rawAddress);
+  const provider = new ethers.JsonRpcProvider(BASE_RPC);
 
   let ethBalance = '0.0';
   let usdcBalance = '0.0';
@@ -42,14 +42,14 @@ async function audit(params = {}) {
 
   try {
     const [ethWei, nonce, code, usdcRaw, nftRaw] = await Promise.all([
-      provider.getBalance(address).catch(() => ethers.BigNumber.from(0)),
+      provider.getBalance(address).catch(() => 0n),
       provider.getTransactionCount(address).catch(() => 0),
       provider.getCode(address).catch(() => '0x'),
-      new ethers.Contract(USDC_BASE, ERC20_ABI, provider).balanceOf(address).catch(() => ethers.BigNumber.from(0)),
-      new ethers.Contract(ERC8004_IDENTITY, ERC721_ABI, provider).balanceOf(address).catch(() => ethers.BigNumber.from(0)),
+      new ethers.Contract(USDC_BASE, ERC20_ABI, provider).balanceOf(address).catch(() => 0n),
+      new ethers.Contract(ERC8004_IDENTITY, ERC721_ABI, provider).balanceOf(address).catch(() => 0n),
     ]);
-    ethBalance = ethers.utils.formatEther(ethWei);
-    usdcBalance = ethers.utils.formatUnits(usdcRaw, 6);
+    ethBalance = ethers.formatEther(ethWei);
+    usdcBalance = ethers.formatUnits(usdcRaw, 6);
     txCount = Number(nonce);
     isContract = code && code !== '0x';
     erc8004NftCount = Number(nftRaw.toString());

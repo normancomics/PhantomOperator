@@ -1,6 +1,5 @@
 require('dotenv').config();
 const RegistryService = require('./services/RegistryService');
-const SuperfluidService = require('./services/SuperfluidService');
 const CryptoSkillService = require('./services/CryptoSkillService');
 const SearchAgent = require('./agents/SearchAgent');
 const BrokerAgent = require('./agents/BrokerAgent');
@@ -54,16 +53,6 @@ class PhantomOperator {
 
     const moneroSubaddress = MoneroAgent.deriveDeterministicSubaddress(`sweep:${fullName}`);
 
-    // 4. Start Superfluid payment stream if walletAddress provided AND PRIVATE_KEY is configured
-    let flowTx = null;
-    if (walletAddress && process.env.PRIVATE_KEY) {
-      try {
-        flowTx = await SuperfluidService.startConstantFlow(walletAddress, flowRate);
-      } catch (err) {
-        console.warn('Superfluid stream skipped:', err.message);
-      }
-    }
-
     return {
       threatsFound: threats.length,
       threats,
@@ -72,7 +61,6 @@ class PhantomOperator {
       opsecScore: opsecSummary ? opsecSummary.score : null,
       opsecGrade: opsecSummary ? opsecSummary.grade : null,
       moneroSovereignSubaddress: moneroSubaddress,
-      flowTxHash: flowTx ? flowTx.hash : null,
     };
   }
 
@@ -109,13 +97,6 @@ class PhantomOperator {
     });
   }
 
-  async openRewardStream(receiver, flowRate) {
-    return SuperfluidService.startConstantFlow(receiver, flowRate);
-  }
-
-  async stopRewardStream(receiver) {
-    return SuperfluidService.deleteConstantFlow(receiver);
-  }
 }
 
 module.exports = PhantomOperator;

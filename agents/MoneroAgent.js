@@ -153,7 +153,7 @@ function decodeMoneroAddress(address) {
 
     const payload = raw.slice(0, raw.length - 4);
     const checksum = raw.slice(raw.length - 4).toString('hex');
-    const expectedChecksum = ethers.utils.keccak256(payload).slice(2, 10);
+    const expectedChecksum = ethers.keccak256(payload).slice(2, 10);
     const checksumValid = checksum.toLowerCase() === expectedChecksum.toLowerCase();
 
     const publicSpendKey = raw.slice(1, 33).toString('hex');
@@ -189,11 +189,11 @@ function decodeMoneroAddress(address) {
  * so callers/agents can test subaddress rotation or verify subaddress formatting.
  */
 function deriveDeterministicSubaddress(seedPhrase = 'PhantomOperator-XMR-Subaddress') {
-  const spendHash = Buffer.from(ethers.utils.keccak256(Buffer.from(`spend:${seedPhrase}`)).slice(2), 'hex');
-  const viewHash = Buffer.from(ethers.utils.keccak256(Buffer.from(`view:${seedPhrase}`)).slice(2), 'hex');
+  const spendHash = Buffer.from(ethers.keccak256(Buffer.from(`spend:${seedPhrase}`)).slice(2), 'hex');
+  const viewHash = Buffer.from(ethers.keccak256(Buffer.from(`view:${seedPhrase}`)).slice(2), 'hex');
   const prefix = Buffer.from([42]); // Mainnet subaddress (8...)
   const payload = Buffer.concat([prefix, spendHash, viewHash]);
-  const checksum = Buffer.from(ethers.utils.keccak256(payload).slice(2, 10), 'hex');
+  const checksum = Buffer.from(ethers.keccak256(payload).slice(2, 10), 'hex');
   return encodeMoneroBase58(Buffer.concat([payload, checksum]));
 }
 
@@ -202,7 +202,7 @@ function deriveDeterministicSubaddress(seedPhrase = 'PhantomOperator-XMR-Subaddr
  */
 function buildMmrCommitment(leaves) {
   const leafHashes = leaves.map((leaf, idx) =>
-    ethers.utils.keccak256(Buffer.from(`mmr:leaf:${idx}:${typeof leaf === 'string' ? leaf : JSON.stringify(leaf)}`))
+    ethers.keccak256(Buffer.from(`mmr:leaf:${idx}:${typeof leaf === 'string' ? leaf : JSON.stringify(leaf)}`))
   );
   const peaks = [];
   let stack = [];
@@ -211,7 +211,7 @@ function buildMmrCommitment(leaves) {
     let current = { height: 0, hash: leafHashes[i] };
     while (stack.length > 0 && stack[stack.length - 1].height === current.height) {
       const left = stack.pop();
-      const combined = ethers.utils.keccak256(
+      const combined = ethers.keccak256(
         Buffer.concat([
           Buffer.from(left.hash.slice(2), 'hex'),
           Buffer.from(current.hash.slice(2), 'hex'),
@@ -224,9 +224,9 @@ function buildMmrCommitment(leaves) {
 
   for (const node of stack) peaks.push(node.hash);
   // Bag the peaks right-to-left
-  let root = peaks.length ? peaks[peaks.length - 1] : ethers.constants.HashZero;
+  let root = peaks.length ? peaks[peaks.length - 1] : ethers.ZeroHash;
   for (let i = peaks.length - 2; i >= 0; i--) {
-    root = ethers.utils.keccak256(
+    root = ethers.keccak256(
       Buffer.concat([Buffer.from(peaks[i].slice(2), 'hex'), Buffer.from(root.slice(2), 'hex')])
     );
   }

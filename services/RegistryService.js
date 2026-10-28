@@ -3,7 +3,7 @@ const { ethers } = require('ethers');
 const IdentityABI = require('../abis/IdentityRegistry.json');
 const ReputationABI = require('../abis/ReputationRegistry.json');
 
-const provider = new ethers.providers.JsonRpcProvider(
+const provider = new ethers.JsonRpcProvider(
   process.env.BASE_RPC_URL || 'https://base-rpc.publicnode.com'
 );
 
