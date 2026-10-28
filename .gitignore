@@ -10,3 +10,10 @@ solana/deploy/
 target/
 **/*.so
 *-keypair.json
+
+.env.stripe.*
+
+# Runtime-only local state and agent notes
+data/
+.learnings/
+.env.stripe.*

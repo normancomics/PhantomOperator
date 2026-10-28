@@ -1,11 +1,33 @@
 # PhantomOperator
 
-> Privacy and OPSEC agent: PII threat scans, data-broker opt-outs, breach checks, metadata audits and OPSEC scoring. Paid per call via x402 (USDCx on Base).
+> Sovereign privacy, OPSEC, and Monero intelligence agent. Audits public-web metadata leaks, PII exposure, breach indicators, data-broker opt-out workflows, EVM-wallet privacy, and Monero Cryptonote/RingCT OPSEC. Paid per call with native USDC on Base through x402.
 
-- [Agent index](/): endpoints and links
-- [SKILL.md](/SKILL.md): skill description
-- [OpenAPI](/openapi.json): API spec including 402 responses
-- [Manifest](/manifest): agent manifest (also /.well-known/agent.json)
+- [Agent index](/): discovery and skill catalogue
+- [Skills](/skills): priced callable skills
+- [OpenAPI](/openapi.json): OpenAPI 3.1 operations and x402 requirements
+- [Quickstart](/quickstart): agent invocation, payment, and response-validation workflow
+- [Sample report](/sample-report): free illustrative output and limitations
+- [ERC-8004 registration](/.well-known/agent-registration.json): canonical identity metadata
+- [A2A agent card](/.well-known/agent-card.json): agent interoperability metadata
+- [x402 discovery](/.well-known/x402): payment discovery
+- [MCP](/mcp): MCP tool catalogue
+- [Usage](/usage): privacy-preserving aggregate settled-call telemetry
 - [Health](/health): liveness
+- [Terms](/terms): service terms
 
-Paid endpoints: POST /skills/{threat-scan,data-removal,full-privacy-sweep,opsec-score,breach-check,metadata-audit}. Unpaid calls return HTTP 402 with an x402 payment descriptor.
+## Payment
+
+Each `POST /skills/*` endpoint returns HTTP 402 before payment. Network: `eip155:8453` (Base). Asset: native USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`. Settlement receiver: `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`.
+
+MPP equivalents are available at `POST /mpp/skills/*` with Tempo OUSD. They issue a standard `WWW-Authenticate: Payment` challenge and return a `Payment-Receipt` after settlement.
+
+## Agent invocation
+
+1. Fetch `/openapi.json` or `/.well-known/x402` and select an authorized skill.
+2. Send a JSON request to the route. Inspect the HTTP 402 challenge and its exact amount, receiver, asset, network, and expiry.
+3. Pay using a compatible x402 or MPP client, retry with the protocol credential, and validate the JSON response against the OpenAPI schema.
+4. Do not submit passwords, seed phrases, private keys, or data you are not authorized to assess.
+
+## Primary skills
+
+`threat-scan`, `data-removal`, `full-privacy-sweep`, `opsec-score`, `breach-check`, `metadata-audit`, `monero-opsec-audit`, `wallet-opsec-audit`, `cypherpunk-redteam-dossier`, and `sovereign-opsec-retainer`.

@@ -1,188 +1,305 @@
 {
-  "name": "phantom-operator",
-  "version": "0.1.0",
-  "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
-  "baseUrl": "https://phantom-operator.onrender.com",
-  "note": "HTTP-backed tool definitions; unpaid calls return 402 with an x402 descriptor. Send X-PAYMENT after paying.",
+  "schemaVersion": "1.0.0",
+  "server": {
+    "name": "phantom-operator",
+    "version": "1.1.0",
+    "description": "PhantomOperator MCP server for authorized privacy, public-exposure, metadata, breach-indicator, wallet-hygiene, and Monero address posture checks. Primary payments use Base USDC via x402.",
+    "homepage": "https://freysaai.freysa.dev",
+    "transport": {
+      "type": "http",
+      "endpoint": "https://freysaai.freysa.dev/mcp"
+    },
+    "payment": {
+      "protocol": "x402",
+      "x402Version": 2,
+      "chainId": 8453,
+      "network": "eip155:8453",
+      "token": "USDC",
+      "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+      "receiver": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+      "facilitator": "https://api.cdp.coinbase.com/platform/v2/x402"
+    }
+  },
   "tools": [
     {
-      "name": "phantom_threat_scan",
-      "description": "Searches the public web for mentions of a person's name that contain PII (phone numbers, email addresses, SSNs, home address). Returns a threat report with severity levels. Paid via x402: 1000000 USDCx base units (6 decimals).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "description": "Full name of the person to scan for"
-          }
-        }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/threat-scan"
-      },
+      "name": "metadata-audit",
+      "description": "Fetch any HTTP/HTTPS URL and extract metadata leaks (HTTP headers, meta tags, HTML comments, third-party trackers). Costs $0.05 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/metadata-audit",
       "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "1000000"
-        },
-        "monero": "planned"
-      }
-    },
-    {
-      "name": "phantom_data_removal",
-      "description": "Submits opt-out / removal requests to known data broker endpoints on behalf of the user. Paid via x402: 5000000 USDCx base units (6 decimals).",
+        "amount": "50000",
+        "priceUsd": 0.05,
+        "token": "USDC",
+        "chainId": 8453
+      },
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "threatUrl": {
-            "type": "string",
-            "description": "URL of the page containing the PII to remove"
-          },
-          "fullName": {
-            "type": "string",
-            "description": "Full name of the person requesting removal"
-          }
-        }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/data-removal"
-      },
-      "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "5000000"
-        },
-        "monero": "planned"
-      }
-    },
-    {
-      "name": "phantom_opsec_score",
-      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0\u2013100) with grade A\u2013F and prioritised remediation steps. Ideal for red teamers, PERSEC auditors, and privacy-first individuals. Paid via x402: 5000000 USDCx base units (6 decimals).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "description": "Full legal name of the target (optional if handle or email provided)"
-          },
-          "handle": {
-            "type": "string",
-            "description": "Online pseudonym / username to assess (optional)"
-          },
-          "email": {
-            "type": "string",
-            "description": "Email address to include in the assessment (optional)"
-          }
-        }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/opsec-score"
-      },
-      "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "5000000"
-        },
-        "monero": "planned"
-      }
-    },
-    {
-      "name": "phantom_breach_check",
-      "description": "Privacy-preserving breach and credential exposure check. Email breach lookup via HaveIBeenPwned (requires HIBP_API_KEY). Password check uses the HIBP k-anonymity range API \u2014 only a 5-char SHA-1 prefix is transmitted; the full credential never leaves the caller. Returns breach count, affected data classes, risk level, and remediation advice. Paid via x402: 2000000 USDCx base units (6 decimals).",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Email address to check against known breach databases (optional)"
-          },
-          "password": {
-            "type": "string",
-            "description": "Plaintext password to check via k-anonymity (optional \u2014 hash prefix only transmitted)"
-          }
-        }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/breach-check"
-      },
-      "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "2000000"
-        },
-        "monero": "planned"
-      }
-    },
-    {
-      "name": "phantom_metadata_audit",
-      "description": "Fetch any HTTP/HTTPS URL and extract all metadata that could de-anonymise its author or expose infrastructure details: HTTP response headers (Server, X-Powered-By, X-Generator), HTML <meta> tags (author, geo.*, email), inline HTML comments (version strings, file paths), and third-party resource origins. Each finding is classified critical / high / medium / low with a remediation recommendation. Paid via x402: 1000000 USDCx base units (6 decimals).",
-      "inputSchema": {
-        "type": "object",
+        "required": [
+          "url"
+        ],
         "properties": {
           "url": {
             "type": "string",
             "description": "Absolute HTTP/HTTPS URL to audit"
           }
         }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/metadata-audit"
-      },
-      "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "1000000"
-        },
-        "monero": "planned"
       }
     },
     {
-      "name": "phantom_full_privacy_sweep",
-      "description": "Runs a full threat scan followed by automated removal requests for all high/critical findings, with real-time Superfluid micropayment streaming for the duration of the task. Paid via x402: 10000000 USDCx base units (6 decimals).",
+      "name": "threat-scan",
+      "description": "Search the public web for mentions of a person's name containing exposed PII (phone numbers, emails, SSNs, home addresses). Costs $0.10 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/threat-scan",
+      "pricing": {
+        "amount": "100000",
+        "priceUsd": 0.1,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "fullName"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "Full name to scan"
+          }
+        }
+      }
+    },
+    {
+      "name": "breach-check",
+      "description": "Keyless email breach intelligence check (XposedOrNot + HIBP) and optional k-anonymity SHA-1 password check. Costs $0.10 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/breach-check",
+      "pricing": {
+        "amount": "100000",
+        "priceUsd": 0.1,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to check"
+          },
+          "password": {
+            "type": "string",
+            "description": "Optional password checked via 5-char SHA-1 prefix"
+          }
+        }
+      }
+    },
+    {
+      "name": "opsec-score",
+      "description": "Multi-vector OPSEC exposure score (0–100, grade A–F) across public web search, data brokers, paste sites, and social profiles. Costs $0.25 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/opsec-score",
+      "pricing": {
+        "amount": "250000",
+        "priceUsd": 0.25,
+        "token": "USDC",
+        "chainId": 8453
+      },
       "inputSchema": {
         "type": "object",
         "properties": {
           "fullName": {
-            "type": "string",
-            "description": "Full name of the person"
+            "type": "string"
           },
-          "walletAddress": {
-            "type": "string",
-            "description": "Wallet address to stream payment from"
+          "handle": {
+            "type": "string"
           },
-          "flowRate": {
-            "type": "string",
-            "description": "Superfluid flow rate in wei/second"
+          "email": {
+            "type": "string"
           }
         }
-      },
-      "http": {
-        "method": "POST",
-        "url": "https://phantom-operator.onrender.com/skills/full-privacy-sweep"
-      },
+      }
+    },
+    {
+      "name": "monero-opsec-audit",
+      "description": "Cryptonote Base58 + Keccak-256 Monero ($XMR) address/subaddress decoder (Spend Key, View Key, checksum), live Monero RingCT telemetry, EVM <-> $XMR swap correlation check, and MMR proof. Costs $0.25 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/monero-opsec-audit",
       "pricing": {
-        "x402": {
-          "network": "base-mainnet",
-          "asset": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
-          "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-          "maxAmountRequired": "10000000"
-        },
-        "monero": "planned"
+        "amount": "250000",
+        "priceUsd": 0.25,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "xmrAddress": {
+            "type": "string",
+            "description": "Monero Standard (4...), Subaddress (8...), or Integrated address"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Optional 64-char hex Monero tx hash"
+          },
+          "evmAddress": {
+            "type": "string",
+            "description": "Optional 0x EVM address"
+          },
+          "swapAmountXmr": {
+            "type": "number"
+          },
+          "nodeMode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote-tor",
+              "remote-clearnet"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "data-removal",
+      "description": "Matches an authorized data-broker listing with supported removal paths and drafts a reviewable CCPA/GDPR-style request. Does not submit a removal without explicit authorization. Costs $0.50 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/data-removal",
+      "pricing": {
+        "amount": "500000",
+        "priceUsd": 0.5,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "link"
+        ],
+        "properties": {
+          "link": {
+            "type": "string",
+            "description": "URL of data broker listing"
+          },
+          "fullName": {
+            "type": "string",
+            "description": "Full name of data subject"
+          }
+        }
+      }
+    },
+    {
+      "name": "wallet-opsec-audit",
+      "description": "On-chain Base/EVM wallet deanonymization & hygiene audit + deterministic $XMR settlement subaddress. Costs $0.50 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/wallet-opsec-audit",
+      "pricing": {
+        "amount": "500000",
+        "priceUsd": 0.5,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "walletAddress"
+        ],
+        "properties": {
+          "walletAddress": {
+            "type": "string",
+            "description": "0x EVM wallet address"
+          }
+        }
+      }
+    },
+    {
+      "name": "full-privacy-sweep",
+      "description": "Combines authorized public-exposure, privacy scoring, and removal guidance into one structured report. Costs $1.00 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/full-privacy-sweep",
+      "pricing": {
+        "amount": "1000000",
+        "priceUsd": 1,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "fullName"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string"
+          },
+          "walletAddress": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "cypherpunk-redteam-dossier",
+      "description": "Comprehensive 6-operator Cypherpunk Red-Team Dossier (Web Metadata + OSINT Threat Scan + Breach Check + OPSEC Score + EVM Wallet Hygiene + $XMR Monero Audit + MMR Attestation). Costs $5.00 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/cypherpunk-redteam-dossier",
+      "pricing": {
+        "amount": "5000000",
+        "priceUsd": 5,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "walletAddress": {
+            "type": "string"
+          },
+          "xmrAddress": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "sovereign-opsec-retainer",
+      "description": "Enterprise & DAO Zero-Trace OPSEC Retainer Package with $XMR Atomic-Swap Treasury Isolation Blueprint and Statutory Takedown Binder. Costs $25.00 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/sovereign-opsec-retainer",
+      "pricing": {
+        "amount": "25000000",
+        "priceUsd": 25,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "walletAddress": {
+            "type": "string"
+          },
+          "xmrAddress": {
+            "type": "string"
+          }
+        }
       }
     }
   ]

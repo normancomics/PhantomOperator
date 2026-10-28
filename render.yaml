@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: phantom-operator
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=optional
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.2"
+      - key: NODE_ENV
+        value: production
+      - key: PAY_TO
+        value: "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
+      - key: PAYMENT_RECEIVER_ADDRESS
+        value: "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
+      - key: PHANTOM_OPERATOR_ADDRESS
+        value: "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
+      - key: RATE_LIMIT_PUBLIC
+        value: "60"
+      - key: RATE_LIMIT_PAID
+        value: "20"

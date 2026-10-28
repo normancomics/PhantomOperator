@@ -2,10 +2,10 @@
   "name": "PhantomOperator",
   "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
   "maintainer": "normancomics",
-  "baseUrl": "https://phantom-operator.onrender.com",
-  "manifestUrl": "https://phantom-operator.onrender.com/manifest",
-  "agentCard": "https://phantom-operator.onrender.com/.well-known/agent.json",
-  "openapi": "https://phantom-operator.onrender.com/openapi.json",
+  "baseUrl": "https://freysaai.freysa.dev",
+  "manifestUrl": "https://freysaai.freysa.dev/manifest",
+  "agentCard": "https://freysaai.freysa.dev/.well-known/agent.json",
+  "openapi": "https://freysaai.freysa.dev/openapi.json",
   "website": "https://github.com/normancomics/PhantomOperator",
   "skills": [
     {
@@ -120,7 +120,7 @@
   "payment": {
     "chain": "base",
     "chainId": 8453,
-    "tokenAddress": "0xD04383398dD2426297da660F9CCA3d439AF9ce1b",
+    "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
     "protocols": [
       "x402"
@@ -137,5 +137,14 @@
   "registries": {
     "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
+  },
+  "version": "1.0.0",
+  "agentWallet": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+  "erc8004AgentId": 821239,
+  "image": "https://freysaai.freysa.dev/logo.png",
+  "external_url": "https://freysaai.freysa.dev",
+  "endpoints": {
+    "base": "https://freysaai.freysa.dev",
+    "mirror": "https://freysaai.freysa.dev"
   }
 }

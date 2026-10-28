@@ -1,0 +1,1199 @@
+[
+  {
+    "id": "metadata-audit",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "58eee753-8d33-41c3-8211-0567239737d1",
+        "name": "PhantomOperator — Metadata Privacy Audit",
+        "description": "Fetch any HTTP/HTTPS URL and extract all metadata that could de-anonymise its author or expose infrastructure details: HTTP response headers, HTML <meta> tags, inline HTML comments, and third-party tracker origins.",
+        "url": "https://freysaai.freysa.dev/skills/metadata-audit",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:17",
+        "updated_at": "2026-10-25 16:42:39",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 317,
+        "last_checked": "2026-10-25 13:06:45",
+        "last_seen_healthy": "2026-10-25 13:06:45",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "50000",
+            "maxAmountRequired": "50000",
+            "resource": "https://freysaai.freysa.dev/skills/metadata-audit",
+            "description": "Audit an HTTP/HTTPS URL for metadata leaks: server/framework headers, author/generator meta tags, HTML comments, and third-party trackers.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "url": {
+                    "type": "string",
+                    "description": "Public HTTP/HTTPS URL to audit"
+                  }
+                }
+              },
+              "output": {
+                "skill": "metadata-audit",
+                "url": "https://example.com",
+                "overallRisk": "low",
+                "findingCounts": {
+                  "critical": 0,
+                  "high": 0,
+                  "medium": 0,
+                  "low": 1
+                },
+                "findings": [],
+                "recommendation": "Clean."
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "threat-scan",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "17c077c2-c38e-43b5-aea4-bfa0dc64dfbc",
+        "name": "PhantomOperator — Threat Scan",
+        "description": "Searches the public web for mentions of a person's name that contain PII (phone numbers, email addresses, SSNs, home address). Returns a threat report with severity levels.",
+        "url": "https://freysaai.freysa.dev/skills/threat-scan",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:19",
+        "updated_at": "2026-10-25 16:42:41",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 299,
+        "last_checked": "2026-10-25 07:48:16",
+        "last_seen_healthy": "2026-10-25 07:48:16",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "100000",
+            "maxAmountRequired": "100000",
+            "resource": "https://freysaai.freysa.dev/skills/threat-scan",
+            "description": "Scan public web search results for PII exposure (phone numbers, emails, SSN patterns, physical addresses) linked to a full name.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "fullName": {
+                    "type": "string",
+                    "description": "Full name to scan (self or authorized target)"
+                  }
+                }
+              },
+              "output": {
+                "skill": "threat-scan",
+                "fullName": "Jane Doe",
+                "threatsFound": 1,
+                "threats": [
+                  {
+                    "title": "Result",
+                    "link": "https://example.com",
+                    "threatLevel": "high",
+                    "reasons": [
+                      "Phone number"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "breach-check",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "c9ca92ac-a597-4d2f-ace9-64ba062c76c2",
+        "name": "PhantomOperator — Breach & Credential Exposure Check",
+        "description": "Checks an email address against public breach intelligence (XposedOrNot + HIBP) and optionally checks a password via HIBP k-anonymity SHA-1 range query (only first 5 hex chars transmitted).",
+        "url": "https://freysaai.freysa.dev/skills/breach-check",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:20",
+        "updated_at": "2026-10-25 16:42:43",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 360,
+        "last_checked": "2026-10-25 15:54:19",
+        "last_seen_healthy": "2026-10-25 15:54:19",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 1,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "100000",
+            "maxAmountRequired": "100000",
+            "resource": "https://freysaai.freysa.dev/skills/breach-check",
+            "description": "Keyless email breach intelligence lookup (XposedOrNot + HIBP) and optional k-anonymity SHA-1 password exposure check.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "email": {
+                    "type": "string",
+                    "description": "Email address to check"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Optional password checked via 5-char SHA-1 k-anonymity range"
+                  }
+                }
+              },
+              "output": {
+                "skill": "breach-check",
+                "email": "test@example.com",
+                "breachCount": 2,
+                "breaches": [],
+                "riskLevel": "medium",
+                "recommendation": "Rotate credentials."
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "opsec-score",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "7d2c341a-48e2-479b-a52b-d11843de0147",
+        "name": "PhantomOperator — OPSEC Exposure Score",
+        "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0–100) with grade A–F and prioritised remediation steps.",
+        "url": "https://freysaai.freysa.dev/skills/opsec-score",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:22",
+        "updated_at": "2026-10-25 16:42:45",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 300,
+        "last_checked": "2026-10-25 00:48:25",
+        "last_seen_healthy": "2026-10-25 00:48:25",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "250000",
+            "maxAmountRequired": "250000",
+            "resource": "https://freysaai.freysa.dev/skills/opsec-score",
+            "description": "Multi-vector OPSEC exposure score (0-100, grade A-F) across web search, data brokers, paste sites, and social profiles, with prioritised remediation.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "fullName": {
+                    "type": "string",
+                    "description": "Full name (provide at least one of fullName, handle, email)"
+                  },
+                  "handle": {
+                    "type": "string",
+                    "description": "Username / handle without @"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Email address"
+                  }
+                }
+              },
+              "output": {
+                "skill": "opsec-score",
+                "score": 25,
+                "grade": "B",
+                "riskLevel": "low",
+                "breakdown": {},
+                "topThreats": [],
+                "recommendations": []
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "monero-opsec-audit",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "5f12853c-eb24-4d87-8b9d-93c338948926",
+        "name": "PhantomOperator — $XMR Monero Cryptographic & Network OPSEC Audit",
+        "description": "Cryptonote Base58 + Keccak-256 Monero ($XMR) address/subaddress decoder (extracts network byte, Public Spend Key, Public View Key, checksum), live Monero mainnet RingCT/transaction privacy inspection, EVM <-> $XMR atomic swap correlation analysis, and Merkle Mountain Range (MMR) commitment proof.",
+        "url": "https://freysaai.freysa.dev/skills/monero-opsec-audit",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:24",
+        "updated_at": "2026-10-25 16:42:46",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 309,
+        "last_checked": "2026-10-25 09:37:44",
+        "last_seen_healthy": "2026-10-25 09:37:44",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "250000",
+            "maxAmountRequired": "250000",
+            "resource": "https://freysaai.freysa.dev/skills/monero-opsec-audit",
+            "description": "Cryptonote Base58 + Keccak-256 Monero ($XMR) address/subaddress decoder (Spend Key, View Key, network byte, checksum), live $XMR RingCT network telemetry, EVM <-> $XMR swap correlation check, and Merkle Mountain Range (MMR) commitment proof.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "xmrAddress": {
+                    "type": "string",
+                    "description": "Monero Standard (4...), Subaddress (8...), or Integrated address"
+                  },
+                  "txHash": {
+                    "type": "string",
+                    "description": "Optional 64-hex Monero transaction hash"
+                  },
+                  "evmAddress": {
+                    "type": "string",
+                    "description": "Optional 0x EVM address to evaluate cross-chain correlation"
+                  },
+                  "swapAmountXmr": {
+                    "type": "number",
+                    "description": "Optional XMR swap amount"
+                  },
+                  "nodeMode": {
+                    "type": "string",
+                    "description": "local | remote-tor | remote-clearnet"
+                  }
+                }
+              },
+              "output": {
+                "skill": "monero-opsec-audit",
+                "sovereigntyScore": 85,
+                "grade": "B",
+                "riskLevel": "low",
+                "addressAnalysis": {
+                  "valid": true,
+                  "type": "mainnet_standard"
+                },
+                "mmrCommitmentProof": {}
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "data-removal",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "1b535b27-e2bb-4e1e-9c4d-31a3728b90fc",
+        "name": "PhantomOperator — Automated Data Broker Removal & Statutory Takedown",
+        "description": "Matches a threat URL against 24+ data brokers (Spokeo, Whitepages, BeenVerified, Intelius, Radaris, LexisNexis/PeopleConnect, etc.) and returns direct suppression portal URLs, compliance emails, SLA timelines, and a legally formatted CCPA § 1798.105 / GDPR Art. 17 / CA Delete Act takedown notice.",
+        "url": "https://freysaai.freysa.dev/skills/data-removal",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:25",
+        "updated_at": "2026-10-25 16:42:48",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 308,
+        "last_checked": "2026-10-25 16:27:41",
+        "last_seen_healthy": "2026-10-25 16:27:41",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "500000",
+            "maxAmountRequired": "500000",
+            "resource": "https://freysaai.freysa.dev/skills/data-removal",
+            "description": "Automated data-broker opt-out matcher (24+ brokers) + statutory CCPA § 1798.105 / GDPR Art. 17 / CA Delete Act legal erasure demand generator.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "link": {
+                    "type": "string",
+                    "description": "URL of the data broker listing to remove"
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "description": "Full name of the data subject (optional)"
+                  }
+                }
+              },
+              "output": {
+                "skill": "data-removal",
+                "broker": "Spokeo",
+                "status": "submitted",
+                "optOutUrl": "https://www.spokeo.com/optout",
+                "estimatedCompletionDays": 3
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "wallet-opsec-audit",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "2422df46-7314-4b6f-8356-cd08fe6aca80",
+        "name": "PhantomOperator — EVM & Cross-Chain Wallet Deanonymization Audit",
+        "description": "Audits any 0x EVM wallet on Base mainnet for transaction graph density, nonce reuse, balance fingerprint, ERC-8004 AgentIdentity verification, and provides a deterministic $XMR Monero subaddress settlement plan.",
+        "url": "https://freysaai.freysa.dev/skills/wallet-opsec-audit",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:26",
+        "updated_at": "2026-10-25 16:42:50",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 1713,
+        "last_checked": "2026-10-25 04:17:43",
+        "last_seen_healthy": "2026-10-25 04:17:43",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 80,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 1,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "500000",
+            "maxAmountRequired": "500000",
+            "resource": "https://freysaai.freysa.dev/skills/wallet-opsec-audit",
+            "description": "On-chain Base/EVM wallet deanonymization & hygiene audit (nonce graph density, balance fingerprint, ERC-8004 identity check, and deterministic $XMR settlement subaddress).",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "0x EVM wallet address to audit"
+                  }
+                }
+              },
+              "output": {
+                "skill": "wallet-opsec-audit",
+                "walletAddress": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+                "privacyHygieneScore": 85,
+                "grade": "A",
+                "riskLevel": "low"
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "full-privacy-sweep",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "d7e9ff27-5359-4147-b681-569793113e34",
+        "name": "PhantomOperator — Full Multi-Operator Privacy Sweep",
+        "description": "End-to-end multi-operator privacy workflow: runs Threat Scan, OPSEC Exposure Score, Data Broker Takedown generation for all high/critical findings, and derives a sovereign $XMR subaddress + MMR proof.",
+        "url": "https://freysaai.freysa.dev/skills/full-privacy-sweep",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:28",
+        "updated_at": "2026-10-25 16:42:51",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 298,
+        "last_checked": "2026-10-25 05:34:28",
+        "last_seen_healthy": "2026-10-25 05:34:28",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "1000000",
+            "maxAmountRequired": "1000000",
+            "resource": "https://freysaai.freysa.dev/skills/full-privacy-sweep",
+            "description": "End-to-end multi-operator privacy sweep: runs Threat Scan, OPSEC Exposure Score, Data Broker Removal dossier generation, and $XMR sovereign subaddress derivation.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "fullName": {
+                    "type": "string",
+                    "description": "Full name of the person to protect"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Optional email address"
+                  },
+                  "handle": {
+                    "type": "string",
+                    "description": "Optional handle/username"
+                  },
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "Optional 0x wallet address"
+                  }
+                }
+              },
+              "output": {
+                "skill": "full-privacy-sweep",
+                "threatsFound": 2,
+                "removalAttempts": 1,
+                "removalResults": [],
+                "opsecScore": 30,
+                "opsecGrade": "B"
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "cypherpunk-redteam-dossier",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "8b6ddb60-d35c-49a3-8063-15a99e3ff53f",
+        "name": "PhantomOperator — Cypherpunk Red-Team & $XMR Sovereign Dossier (Pro Tier)",
+        "description": "Comprehensive multi-surface red-team intelligence dossier combining Web Metadata Audit, Public OSINT Threat Scan, Keyless Credential Breach Intelligence, EVM Wallet Deanonymization Audit, $XMR Monero Cryptonote/RingCT Audit, and Statutory Data Broker Erasure Package with a signed Merkle Mountain Range (MMR) attestation.",
+        "url": "https://freysaai.freysa.dev/skills/cypherpunk-redteam-dossier",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:29",
+        "updated_at": "2026-10-25 16:42:53",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 326,
+        "last_checked": "2026-10-25 14:15:12",
+        "last_seen_healthy": "2026-10-25 14:15:12",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "5000000",
+            "maxAmountRequired": "5000000",
+            "resource": "https://freysaai.freysa.dev/skills/cypherpunk-redteam-dossier",
+            "description": "Comprehensive 6-operator Cypherpunk Red-Team Dossier: Web Metadata Audit + OSINT Threat Scan + Breach Check + OPSEC Score + EVM Wallet Hygiene + $XMR Monero Cryptonote Audit + MMR Cryptographic Attestation.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "fullName": {
+                    "type": "string",
+                    "description": "Target full name or organization"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Email for breach & OSINT correlation"
+                  },
+                  "handle": {
+                    "type": "string",
+                    "description": "Handle or username"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "HTTP/HTTPS URL to audit"
+                  },
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "0x EVM wallet address"
+                  },
+                  "xmrAddress": {
+                    "type": "string",
+                    "description": "$XMR Monero address/subaddress"
+                  }
+                }
+              },
+              "output": {
+                "skill": "cypherpunk-redteam-dossier",
+                "executiveSummary": {
+                  "compositeSovereigntyScore": 82,
+                  "grade": "B"
+                },
+                "modules": {},
+                "mmrAttestation": {}
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  },
+  {
+    "id": "sovereign-opsec-retainer",
+    "status": 201,
+    "response": {
+      "message": "Service registered and live (domain verified).",
+      "service": {
+        "id": "55ca0fec-66b3-4cfb-8a1e-f852ba05efe3",
+        "name": "PhantomOperator — Sovereign Enterprise OPSEC & Zero-Trace Architecture Package",
+        "description": "Full-spectrum enterprise & DAO operational security audit: evaluates up to 3 domains/URLs, executive identity/email exposure, treasury EVM wallet clustering, $XMR Monero atomic-swap treasury isolation architecture, and generates a complete legal CCPA/GDPR suppression binder.",
+        "url": "https://freysaai.freysa.dev/skills/sovereign-opsec-retainer",
+        "protocol": "x402",
+        "price_sats": null,
+        "price_usd": null,
+        "payment_asset": "USDC",
+        "payment_network": "Base",
+        "category": "ai/privacy-security",
+        "input_schema": null,
+        "output_schema": null,
+        "provider": "PhantomOperator",
+        "source": "self-registered",
+        "source_id": null,
+        "featured": 0,
+        "registered_at": "2026-10-23 04:19:31",
+        "updated_at": "2026-10-25 16:42:55",
+        "health_status": "healthy",
+        "uptime_30d": 1,
+        "latency_p50_ms": 289,
+        "last_checked": "2026-10-25 14:34:14",
+        "last_seen_healthy": "2026-10-25 14:34:14",
+        "consecutive_failures": 0,
+        "is_template": 0,
+        "is_demo": 0,
+        "verified": 0,
+        "contact_email": "zzzeroday@tutamail.com",
+        "status": "active",
+        "http_method": "GET",
+        "reliability_score": 90,
+        "x402_payment_valid": 1,
+        "x402_facilitator_reachable": null,
+        "x402_asset_known": 1,
+        "probe_body": null,
+        "l402_version": null,
+        "agent_spec_url": null,
+        "capabilities": null,
+        "token_format": null,
+        "invoice_type": null,
+        "pricing_model": null,
+        "content_domain": null,
+        "domain_verified": 0,
+        "provider_deleted": 0,
+        "deleted_at": null,
+        "approval_reason": "domain-verified",
+        "hostname": "freysaai.freysa.dev",
+        "l402_compliant": null,
+        "l402_degrade_reason": null,
+        "l402_format": null,
+        "lnget_compatible": null,
+        "consecutive_latency_spikes": 0,
+        "probe_status": "probeable"
+      },
+      "also_registered": [],
+      "verification": {
+        "protocol": "x402",
+        "httpStatus": 402,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "amount": "25000000",
+            "maxAmountRequired": "25000000",
+            "resource": "https://freysaai.freysa.dev/skills/sovereign-opsec-retainer",
+            "description": "Full-spectrum Enterprise & DAO Zero-Trace OPSEC Retainer Package: Multi-vector OSINT + Web Metadata + Credential Breach + Treasury EVM Clustering + $XMR Atomic-Swap Treasury Isolation Blueprint + Statutory CCPA/GDPR Takedown Binder.",
+            "mimeType": "application/json",
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
+            "maxTimeoutSeconds": 300,
+            "extra": {
+              "name": "USD Coin",
+              "version": "2"
+            },
+            "outputSchema": {
+              "input": {
+                "type": "http",
+                "method": "POST",
+                "bodyType": "json",
+                "bodyFields": {
+                  "organization": {
+                    "type": "string",
+                    "description": "Organization, DAO, or principal name"
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "description": "Principal full name"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Primary security contact email"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "Primary domain URL"
+                  },
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "Primary 0x treasury/operational wallet"
+                  },
+                  "xmrAddress": {
+                    "type": "string",
+                    "description": "Optional $XMR subaddress"
+                  }
+                }
+              },
+              "output": {
+                "skill": "sovereign-opsec-retainer",
+                "retainerId": "RET-8004-XMR",
+                "architectureBlueprint": {},
+                "fullAudit": {}
+              }
+            }
+          }
+        ],
+        "assetKnown": true,
+        "facilitatorReachable": null,
+        "version": 2,
+        "paymentMethod": null
+      }
+    }
+  }
+]

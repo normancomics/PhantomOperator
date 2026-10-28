@@ -1,0 +1,178 @@
+[
+  {
+    "id": "metadata-audit",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "submission_id": 2122,
+      "slug": "freysaai-freysa-dev-sub2122",
+      "message": "Auto-verified x402 support — your service is now live in the directory."
+    }
+  },
+  {
+    "id": "threat-scan",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "submission_id": 2123,
+      "slug": "freysaai-freysa-dev-sub2123",
+      "message": "Auto-verified x402 support — your service is now live in the directory."
+    }
+  },
+  {
+    "id": "breach-check",
+    "status": 200,
+    "body": {
+      "status": "already_listed",
+      "message": "A service with this URL is already in the directory. Submitting it again will not change it: verify domain ownership to edit.",
+      "claim_url": "https://agent-tools.cloud/account",
+      "claim_docs": "https://agent-tools.cloud/docs/claim",
+      "api": {
+        "message": "No browser needed. Mint a key, publish the token on your host, verify, then edit. The key identifies you; the published token is what proves the host is yours.",
+        "steps": [
+          {
+            "method": "POST",
+            "url": "https://agent-tools.cloud/api/v1/keys",
+            "note": "No credentials needed. Store the key; it is shown once."
+          },
+          {
+            "method": "POST",
+            "url": "https://agent-tools.cloud/api/v1/claims",
+            "auth": "Authorization: Bearer <api_key>",
+            "body": {
+              "host": "<your-host>",
+              "method": "wellknown_file"
+            },
+            "note": "Returns a token and where to publish it."
+          },
+          {
+            "method": "POST",
+            "url": "https://agent-tools.cloud/api/v1/claims/<claim_id>/verify",
+            "auth": "Authorization: Bearer <api_key>",
+            "body": {
+              "token": "<the token you just published>"
+            },
+            "note": "Returns every listing on the host, with its edit URL."
+          },
+          {
+            "method": "PATCH",
+            "url": "https://agent-tools.cloud/api/v1/listings/<kind>/<slug>",
+            "auth": "Authorization: Bearer <api_key>",
+            "note": "Send only the fields you want to change."
+          }
+        ],
+        "docs": "https://agent-tools.cloud/docs/claim"
+      },
+      "slug": "freysaai-freysa-dev-scan",
+      "url": "https://freysaai.freysa.dev/skills/breach-check"
+    }
+  },
+  {
+    "id": "opsec-score",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "submission_id": 2124,
+      "slug": "freysaai-freysa-dev-sub2124",
+      "message": "Auto-verified x402 support — your service is now live in the directory."
+    }
+  },
+  {
+    "id": "monero-opsec-audit",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "submission_id": 2125,
+      "slug": "freysaai-freysa-dev-sub2125",
+      "message": "Auto-verified x402 support — your service is now live in the directory."
+    }
+  },
+  {
+    "id": "data-removal",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "submission_id": 2126,
+      "slug": "freysaai-freysa-dev-sub2126",
+      "message": "Auto-verified x402 support — your service is now live in the directory."
+    }
+  },
+  {
+    "id": "wallet-opsec-audit",
+    "status": 429,
+    "body": {
+      "detail": {
+        "error": "rate_limited",
+        "message": "Too many service submissions from this IP.",
+        "window": "day",
+        "limit": 5,
+        "retry_after_seconds": 26182
+      }
+    }
+  },
+  {
+    "id": "full-privacy-sweep",
+    "status": 429,
+    "body": {
+      "detail": {
+        "error": "rate_limited",
+        "message": "Too many service submissions from this IP.",
+        "window": "day",
+        "limit": 5,
+        "retry_after_seconds": 26182
+      }
+    }
+  },
+  {
+    "id": "cypherpunk-redteam-dossier",
+    "status": 429,
+    "body": {
+      "detail": {
+        "error": "rate_limited",
+        "message": "Too many service submissions from this IP.",
+        "window": "day",
+        "limit": 5,
+        "retry_after_seconds": 26181
+      }
+    }
+  },
+  {
+    "id": "sovereign-opsec-retainer",
+    "status": 429,
+    "body": {
+      "detail": {
+        "error": "rate_limited",
+        "message": "Too many service submissions from this IP.",
+        "window": "day",
+        "limit": 5,
+        "retry_after_seconds": 26181
+      }
+    }
+  },
+  {
+    "id": "mcp",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "slug": "phantomoperator-mcp",
+      "health": "ok",
+      "x402": false,
+      "x402_service_slug": "freysaai-freysa-dev-sub2122",
+      "view_url": "/mcp/servers/phantomoperator-mcp",
+      "message": "Indexed your MCP server."
+    }
+  },
+  {
+    "id": "a2a",
+    "status": 200,
+    "body": {
+      "status": "listed",
+      "slug": "phantomoperator",
+      "name": "PhantomOperator",
+      "x402": false,
+      "x402_service_slug": "freysaai-freysa-dev-sub2122",
+      "view_url": "/a2a/agents/phantomoperator",
+      "message": "Indexed your A2A agent from its Agent Card."
+    }
+  }
+]

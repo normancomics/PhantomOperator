@@ -1,113 +1,121 @@
+require('dotenv').config();
+const RegistryService = require('./services/RegistryService');
+const SuperfluidService = require('./services/SuperfluidService');
+const CryptoSkillService = require('./services/CryptoSkillService');
 const SearchAgent = require('./agents/SearchAgent');
 const BrokerAgent = require('./agents/BrokerAgent');
-const { startSuperfluidFlow, stopSuperfluidFlow } = require('./services/SuperfluidService');
+const OpsecAgent = require('./agents/OpsecAgent');
+const BreachAgent = require('./agents/BreachAgent');
+const MetadataAgent = require('./agents/MetadataAgent');
+const MoneroAgent = require('./agents/MoneroAgent');
+const WalletOpsecAgent = require('./agents/WalletOpsecAgent');
 
-class PhantomOperatorCore {
+class PhantomOperator {
   constructor(config = {}) {
-    this.searchAgent = new SearchAgent(config.search || {});
-    this.brokerAgent = new BrokerAgent(config.broker || {});
-    this.superfluidConfig = config.superfluid || {};
+    this.config = config;
+    this.agentAddress =
+      process.env.PAY_TO ||
+      process.env.PAYMENT_RECEIVER_ADDRESS ||
+      process.env.PHANTOM_OPERATOR_ADDRESS ||
+      process.env.SOVEREIGN_AGENT_ADDRESS ||
+      '0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6';
   }
 
-  /**
-   * Scan for threats / exposures related to a user.
-   * @param {Object} user - { email, name, country?, ... }
-   * @returns {Promise<{ exposures: Array }>}
-   */
-  async scanExposures(user) {
-    return this.searchAgent.scan(user);
+  async initialize(metadataURI) {
+    console.log('Initializing PhantomOperator...');
+    await RegistryService.registerAgent(metadataURI);
+    await CryptoSkillService.publishAgent();
+    console.log('PhantomOperator registered on Base and CryptoSkill.org');
   }
 
-  /**
-   * Schedule / execute opt-outs for a list of exposures.
-   * @param {Array} exposures - output from scanExposures().exposures
-   * @param {Object} user - same user object used for scanExposures
-   * @returns {Promise<{ jobs: Array }>}
-   */
-  async scheduleOptOuts(exposures, user) {
-    return this.brokerAgent.scheduleOptOuts(exposures, user);
-  }
+  async startDataRemovalTask({ fullName, email, handle, walletAddress, flowRate }) {
+    console.log(`Starting privacy sweep for ${fullName}`);
 
-  /**
-   * Open a Superfluid reward stream from configured wallet to a receiver.
-   * @param {string} to - receiver address
-   * @param {string} flowRate - flow rate per second (string)
-   * @returns {Promise<string>} txHash
-   */
-  async openRewardStream(to, flowRate) {
-    const txHash = await startSuperfluidFlow(to, flowRate);
-    return txHash;
-  }
-
-  /**
-   * Stop a Superfluid reward stream from configured wallet to a receiver.
-   * @param {string} to - receiver address
-   * @returns {Promise<string>} txHash
-   */
-  async stopRewardStream(to) {
-    const txHash = await stopSuperfluidFlow(to);
-    return txHash;
-  }
-
-  /**
-   * End-to-end “run privacy workflow”:
-   *  - scan exposures
-   *  - schedule opt-outs
-   */
-  async runPrivacyWorkflow(user) {
-    const { exposures } = await this.scanExposures(user);
-    const { jobs } = await this.scheduleOptOuts(exposures, user);
-
-    return {
-      user,
-      exposures,
-      jobs,
-    };
-  }
-
-  /**
-   * Full privacy sweep used by the paid full-privacy-sweep skill.
-   *  1. Runs a real DuckDuckGo threat scan via SearchAgent.run.
-   *  2. Submits removal requests for every high/critical threat.
-   *  3. Optionally opens a Superfluid payment stream for the duration.
-   *
-   * @param {{ fullName: string, walletAddress?: string, flowRate?: string }} params
-   *   fullName     - Full name to scan and remediate (required).
-   *   walletAddress - Wallet that will stream payment; omit to skip Superfluid.
-   *   flowRate     - Superfluid flow rate in wei/second (string, e.g. "385802469135802"
-   *                  ≈ $1/day in USDCx). Required when walletAddress is provided;
-   *                  ignored otherwise.
-   * @returns {Promise<{ threatsFound: number, removalAttempts: number, flowTxHash: string|null }>}
-   */
-  async startDataRemovalTask({ fullName, walletAddress, flowRate }) {
-    // 1. Threat scan
+    // 1. Scan for threats via SearchAgent
     const threats = await SearchAgent.run({ fullName });
-    const actionable = threats.filter(
-      t => t.threatLevel === 'critical' || t.threatLevel === 'high'
-    );
+    console.log(`Found ${threats.length} threats`);
 
-    // 2. Removal requests for actionable threats
-    const removalResults = await Promise.allSettled(
-      actionable.map(t => BrokerAgent.removeThreat({ link: t.link, fullName }))
-    );
-    const removalAttempts = removalResults.length;
+    // 2. Submit removal requests via BrokerAgent for high/critical threats
+    const removalResults = [];
+    for (const threat of threats) {
+      if (threat.threatLevel === 'high' || threat.threatLevel === 'critical') {
+        const result = await BrokerAgent.removeThreat({ link: threat.link, fullName });
+        removalResults.push(result);
+      }
+    }
 
-    // 3. Optionally open a Superfluid stream
-    let flowTxHash = null;
-    if (walletAddress && flowRate) {
+    // 3. Optional OPSEC & Monero sovereignty summary
+    let opsecSummary = null;
+    try {
+      opsecSummary = await OpsecAgent.assess({ fullName, email, handle });
+    } catch {
+      opsecSummary = null;
+    }
+
+    const moneroSubaddress = MoneroAgent.deriveDeterministicSubaddress(`sweep:${fullName}`);
+
+    // 4. Start Superfluid payment stream if walletAddress provided AND PRIVATE_KEY is configured
+    let flowTx = null;
+    if (walletAddress && process.env.PRIVATE_KEY) {
       try {
-        flowTxHash = await startSuperfluidFlow(walletAddress, flowRate);
+        flowTx = await SuperfluidService.startConstantFlow(walletAddress, flowRate);
       } catch (err) {
-        console.warn('PhantomOperatorCore: Superfluid stream failed (non-fatal):', err.message);
+        console.warn('Superfluid stream skipped:', err.message);
       }
     }
 
     return {
-      threatsFound:    threats.length,
-      removalAttempts,
-      flowTxHash,
+      threatsFound: threats.length,
+      threats,
+      removalAttempts: removalResults.length,
+      removalResults,
+      opsecScore: opsecSummary ? opsecSummary.score : null,
+      opsecGrade: opsecSummary ? opsecSummary.grade : null,
+      moneroSovereignSubaddress: moneroSubaddress,
+      flowTxHash: flowTx ? flowTx.hash : null,
     };
+  }
+
+  async assessOpsec(target) {
+    return OpsecAgent.assess(target);
+  }
+
+  async checkBreach(email, password) {
+    return BreachAgent.getBreachReport(email, password);
+  }
+
+  async auditMetadata(url) {
+    return MetadataAgent.audit(url);
+  }
+
+  async auditMonero(params) {
+    return MoneroAgent.audit(params);
+  }
+
+  async auditWalletOpsec(params) {
+    return WalletOpsecAgent.audit(params);
+  }
+
+  async runPrivacyWorkflow(user = {}) {
+    const fullName = user.fullName || user.name || "Unknown Subject";
+    const email = user.email || undefined;
+    const handle = user.handle || undefined;
+    return this.startDataRemovalTask({
+      fullName,
+      email,
+      handle,
+      walletAddress: user.walletAddress,
+      flowRate: user.flowRate,
+    });
+  }
+
+  async openRewardStream(receiver, flowRate) {
+    return SuperfluidService.startConstantFlow(receiver, flowRate);
+  }
+
+  async stopRewardStream(receiver) {
+    return SuperfluidService.deleteConstantFlow(receiver);
   }
 }
 
-module.exports = PhantomOperatorCore;
+module.exports = PhantomOperator;

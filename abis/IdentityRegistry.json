@@ -1,60 +1,86 @@
 [
   {
-    "type": "function",
+    "inputs": [
+      { "internalType": "string", "name": "agentURI", "type": "string" }
+    ],
+    "name": "register",
+    "outputs": [
+      { "internalType": "uint256", "name": "agentId", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "register",
+    "outputs": [
+      { "internalType": "uint256", "name": "agentId", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "agentId", "type": "uint256" },
+      { "internalType": "string", "name": "newURI", "type": "string" }
+    ],
+    "name": "setAgentURI",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "string", "name": "metadataURI", "type": "string" }
+    ],
     "name": "registerAgent",
-    "inputs": [
-      { "name": "metadataURI", "type": "string", "internalType": "string" }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "updateMetadata",
-    "inputs": [
-      { "name": "metadataURI", "type": "string", "internalType": "string" }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getAgentMetadata",
-    "inputs": [
-      { "name": "agent", "type": "address", "internalType": "address" }
-    ],
     "outputs": [
-      { "name": "metadataURI", "type": "string", "internalType": "string" },
-      { "name": "registeredAt", "type": "uint256", "internalType": "uint256" }
+      { "internalType": "uint256", "name": "agentId", "type": "uint256" }
     ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    "type": "function",
-    "name": "isRegistered",
     "inputs": [
-      { "name": "agent", "type": "address", "internalType": "address" }
+      { "internalType": "address", "name": "owner", "type": "address" }
     ],
+    "name": "balanceOf",
     "outputs": [
-      { "name": "", "type": "bool", "internalType": "bool" }
+      { "internalType": "uint256", "name": "", "type": "uint256" }
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "type": "event",
-    "name": "AgentRegistered",
     "inputs": [
-      { "name": "agent", "type": "address", "indexed": true, "internalType": "address" },
-      { "name": "metadataURI", "type": "string", "indexed": false, "internalType": "string" },
-      { "name": "registeredAt", "type": "uint256", "indexed": false, "internalType": "uint256" }
-    ]
+      { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
+    ],
+    "name": "tokenURI",
+    "outputs": [
+      { "internalType": "string", "name": "", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    "type": "event",
-    "name": "MetadataUpdated",
     "inputs": [
-      { "name": "agent", "type": "address", "indexed": true, "internalType": "address" },
-      { "name": "metadataURI", "type": "string", "indexed": false, "internalType": "string" }
-    ]
+      { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
+    ],
+    "name": "ownerOf",
+    "outputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "agentId", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "agentURI", "type": "string" },
+      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" }
+    ],
+    "name": "Registered",
+    "type": "event"
   }
 ]

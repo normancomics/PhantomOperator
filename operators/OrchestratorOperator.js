@@ -1,4 +1,3 @@
-// Simple wrapper — delegates to PhantomOperatorCore.
 const PhantomOperatorCore = require('../PhantomOperatorCore');
 
 class OrchestratorOperator {
@@ -6,17 +5,29 @@ class OrchestratorOperator {
     this.core = new PhantomOperatorCore(config);
   }
 
-  /**
-   * Full privacy sweep: threat scan → automated removal → optional Superfluid stream.
-   * @param {{ fullName: string, walletAddress?: string, flowRate?: string }} params
-   * @returns {Promise<{ threatsFound: number, removalAttempts: number, flowTxHash: string|null }>}
-   */
   async startDataRemovalTask(params) {
     return this.core.startDataRemovalTask(params);
   }
 
-  // Later: add high-level orchestration methods here, e.g.:
-  // async runFullPrivacySweep(identity) { ... }
+  async assessOpsec(target) {
+    return this.core.assessOpsec(target);
+  }
+
+  async checkBreach(email, password) {
+    return this.core.checkBreach(email, password);
+  }
+
+  async auditMetadata(url) {
+    return this.core.auditMetadata(url);
+  }
+
+  async auditMonero(params) {
+    return this.core.auditMonero(params);
+  }
+
+  async auditWalletOpsec(params) {
+    return this.core.auditWalletOpsec(params);
+  }
 }
 
 module.exports = OrchestratorOperator;

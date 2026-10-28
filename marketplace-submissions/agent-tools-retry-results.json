@@ -1,0 +1,22 @@
+[
+  {
+    "id": "wallet-opsec-audit",
+    "status": 200,
+    "body": "{\"status\":\"listed\",\"submission_id\":2140,\"slug\":\"freysaai-freysa-dev-sub2140\",\"message\":\"Auto-verified x402 support — your service is now live in the directory.\"}"
+  },
+  {
+    "id": "full-privacy-sweep",
+    "status": 200,
+    "body": "{\"status\":\"listed\",\"submission_id\":2141,\"slug\":\"freysaai-freysa-dev-sub2141\",\"message\":\"Auto-verified x402 support — your service is now live in the directory.\"}"
+  },
+  {
+    "id": "cypherpunk-redteam-dossier",
+    "status": 200,
+    "body": "{\"status\":\"listed\",\"submission_id\":2142,\"slug\":\"freysaai-freysa-dev-sub2142\",\"message\":\"Auto-verified x402 support — your service is now live in the directory.\"}"
+  },
+  {
+    "id": "sovereign-opsec-retainer",
+    "status": 200,
+    "body": "{\"status\":\"listed\",\"submission_id\":2143,\"slug\":\"freysaai-freysa-dev-sub2143\",\"message\":\"Auto-verified x402 support — your service is now live in the directory.\"}"
+  }
+]
