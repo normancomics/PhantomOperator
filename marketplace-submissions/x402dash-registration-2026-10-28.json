@@ -1,0 +1,12 @@
+{
+  "submittedAt": "2026-10-28T01:22:00Z",
+  "directory": "https://x402dash.com",
+  "results": [
+    {"endpoint": "https://freysaai.freysa.dev/skills/metadata-audit", "status": "registered", "verified": true},
+    {"endpoint": "https://freysaai.freysa.dev/skills/breach-check", "status": "registered", "verified": true},
+    {"endpoint": "https://freysaai.freysa.dev/skills/threat-scan", "status": "registered", "verified": true},
+    {"endpoint": "https://freysaai.freysa.dev/skills/opsec-score", "status": "registered", "verified": true},
+    {"endpoint": "https://freysaai.freysa.dev/skills/wallet-opsec-audit", "status": "already_registered", "verified": true}
+  ],
+  "note": "The directory reported live x402 verification. Search enrichment and liveness monitoring are asynchronous."
+}
