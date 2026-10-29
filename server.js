@@ -482,6 +482,10 @@ function renderLandingHtml(base) {
           <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMetadataPreview()">Try free metadata preview</button>
           <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMoneroDemo()">View a free sample report</button>
         </div>
+        <div id="previewUpgrade" class="addr-box" hidden>
+          <strong style="color:var(--cyan)">Free preview complete.</strong> The $0.05 full audit adds the complete findings, detailed headers and trackers, and remediation guidance for this URL.<br/>
+          <button class="btn-sm" style="margin-top:9px" onclick="upgradePreviewToFullAudit()">View full-audit payment terms — $0.05 USDC on Base</button>
+        </div>
         <p class="sub">Only submit information you are authorized to assess. Do not submit passwords, seed phrases, private keys, or another person's personal data without permission. <a href="/terms">Terms and data-handling limits</a>.</p>
         <pre id="consoleOut">// Select a check, inspect its exact terms, or view a free sample report.</pre>
       </div>
@@ -509,7 +513,7 @@ function renderLandingHtml(base) {
     </div>
 
     <div class="card">
-      <h2><span>Complete x402 Skill Catalog (Base Mainnet USDC)</span> <span>10 Active Skills</span></h2>
+      <h2><span>Complete x402 Skill Catalog (USDC on Base Mainnet)</span> <span>${Object.values(ROUTES).length} Active Skills</span></h2>
       <table>
         <thead>
           <tr><th>Endpoint</th><th>Price</th><th>Capabilities</th><th>Action</th></tr>
@@ -560,7 +564,15 @@ function renderLandingHtml(base) {
         const res = await fetch('/preview/metadata-audit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: payload.url }) });
         const data = await res.json();
         out.textContent = 'HTTP ' + res.status + ' (Free Preview)\\n' + JSON.stringify(data, null, 2);
-      } catch (e) { out.textContent = 'Error: ' + e.message; }
+        document.getElementById('previewUpgrade').hidden = !res.ok;
+      } catch (e) { out.textContent = 'Error: ' + e.message; document.getElementById('previewUpgrade').hidden = true; }
+    }
+    function upgradePreviewToFullAudit() {
+      let payload;
+      try { payload = JSON.parse(document.getElementById('payloadBox').value); } catch { return; }
+      if (!payload.url) return;
+      selectSkill('metadata-audit', { url: payload.url }, 0.05);
+      invokeSkill();
     }
 
     async function runFreeMoneroDemo() {
