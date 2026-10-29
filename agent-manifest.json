@@ -617,6 +617,50 @@
         "xmr",
         "zero-trace"
       ]
+    },
+    {
+      "id": "spam-caller-removal",
+      "name": "Spam Caller-ID Removal Guidance",
+      "description": "Prepare official caller-ID unlisting and spam-label dispute steps for an authorized phone number. Does not submit requests.",
+      "version": "1.1.0",
+      "inputs": [
+        {
+          "name": "phoneNumber",
+          "type": "string",
+          "description": "Authorized phone number in international format"
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "description": "Optional: truecaller, hiya, robokiller, or whitepages"
+        },
+        {
+          "name": "authorized",
+          "type": "boolean",
+          "description": "Must be true to confirm authorization"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "providers",
+          "type": "array",
+          "description": "Official provider-specific removal/dispute paths and notes"
+        }
+      ],
+      "pricing": {
+        "perCallAmount": "100000",
+        "priceUsd": 0.1,
+        "token": "USDC",
+        "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "protocol": "x402 v2 exact",
+        "network": "eip155:8453"
+      },
+      "tags": [
+        "privacy",
+        "spam-calls",
+        "caller-id",
+        "opt-out"
+      ]
     }
   ],
   "payment": {

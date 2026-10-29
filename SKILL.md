@@ -45,6 +45,7 @@ When enabled by the operator, obtain a unique subaddress quote at `POST /billing
 | `opsec-score` | Structured public-exposure score and mitigations | $0.25 |
 | `monero-opsec-audit` | Monero address and privacy-posture audit | $0.25 |
 | `data-removal` | Supported removal-path matching and draft request generation | $0.50 |
+| `spam-caller-removal` | Caller-ID unlisting and spam-label dispute guidance | $0.10 |
 | `wallet-opsec-audit` | Public Base/EVM wallet hygiene review | $0.50 |
 | `full-privacy-sweep` | Combined authorized privacy report | $1.00 |
 | `cypherpunk-redteam-dossier` | Combined multi-module authorized dossier | $5.00 |

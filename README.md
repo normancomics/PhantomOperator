@@ -78,6 +78,7 @@ The canonical schemas, payment requirements, and examples are generated at [`/op
 | `opsec-score` | Produces a structured public-exposure score and prioritized mitigations. | $0.25 |
 | `monero-opsec-audit` | Decodes a supplied Monero address and returns privacy-posture guidance. | $0.25 |
 | `data-removal` | Identifies supported broker-removal paths and drafts a removal request; it does not submit requests without explicit authorization. | $0.50 |
+| `spam-caller-removal` | Prepares official caller-ID unlisting and spam-label dispute steps; it does not submit requests. | $0.10 |
 | `wallet-opsec-audit` | Reviews public Base/EVM wallet hygiene signals. | $0.50 |
 | `full-privacy-sweep` | Combines relevant authorized checks into one report. | $1.00 |
 | `cypherpunk-redteam-dossier` | Combines multiple authorized assessment modules. | $5.00 |

@@ -301,6 +301,43 @@
           }
         }
       }
+    },
+    {
+      "name": "spam-caller-removal",
+      "description": "Prepare official caller-ID unlisting and spam-label dispute steps for an authorized phone number. Does not submit requests. Costs $0.10 USDC on Base via x402.",
+      "endpoint": "POST https://freysaai.freysa.dev/skills/spam-caller-removal",
+      "pricing": {
+        "amount": "100000",
+        "priceUsd": 0.1,
+        "token": "USDC",
+        "chainId": 8453
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "phoneNumber",
+          "authorized"
+        ],
+        "properties": {
+          "phoneNumber": {
+            "type": "string",
+            "description": "Authorized number in international format"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "truecaller",
+              "hiya",
+              "robokiller",
+              "whitepages"
+            ]
+          },
+          "authorized": {
+            "type": "boolean",
+            "description": "Must be true"
+          }
+        }
+      }
     }
   ]
 }
