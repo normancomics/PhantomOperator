@@ -633,6 +633,7 @@ app.get('/', publicLimiter, (req, res) => {
       openapi: `${b}/openapi.json`,
       mcp: `${b}/mcp`,
       x402: `${b}/.well-known/x402`,
+      x402Json: `${b}/.well-known/x402.json`,
       agentCard: `${b}/.well-known/agent-card.json`,
       agentRegistration: `${b}/.well-known/agent-registration.json`,
       llmsTxt: `${b}/llms.txt`,
@@ -707,7 +708,7 @@ app.get('/.well-known/agent-tools-verify.txt', (_req, res) => {
   return res.type('text/plain').send(`${token}\n`);
 });
 
-app.get('/.well-known/x402', publicLimiter, (req, res) => {
+app.get(['/.well-known/x402', '/.well-known/x402.json'], publicLimiter, (req, res) => {
   const b = baseUrl(req);
   const routes = Object.values(ROUTES);
   res.json({
