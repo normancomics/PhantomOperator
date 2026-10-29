@@ -32,7 +32,9 @@ require('dotenv').config();
 const path    = require('path');
 const fs      = require('fs');
 const express = require('express');
-const { Mppx, tempo } = require('mppx/express');
+const { Mppx, stripe, tempo } = require('mppx/express');
+const { Store } = require('mppx/server');
+const Stripe = require('stripe');
 const x402    = require('./lib/x402');
 const usage   = require('./lib/usage');
 const moneroBilling = require('./lib/monero-billing');
@@ -47,6 +49,35 @@ const mpp = Mppx.create({
   secretKey: process.env.MPP_SECRET_KEY,
   realm: process.env.MPP_REALM || 'freysaai.freysa.dev',
 });
+
+// Stripe MPP is deliberately a separate optional rail. It is enabled only when
+// all protected Stripe settings are present, and never changes Base x402 routes.
+function createStripeMpp() {
+  if (process.env.STRIPE_MPP_ENABLED === 'false') return null;
+  const { STRIPE_SECRET_KEY, STRIPE_PROFILE_ID, TEMPO_DEPOSIT_ADDRESS } = process.env;
+  if (!STRIPE_SECRET_KEY || !STRIPE_PROFILE_ID || !TEMPO_DEPOSIT_ADDRESS) return null;
+  try {
+    const stripeClient = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2026-07-29.preview' });
+    const machinePayments = stripe.create({
+      client: stripeClient,
+      networkId: STRIPE_PROFILE_ID,
+      livemode: !STRIPE_SECRET_KEY.includes('_test_'),
+      depositAddresses: { tempo: TEMPO_DEPOSIT_ADDRESS },
+      // This deployment runs one process. Replace this with a shared atomic
+      // store before running multiple instances so replay protection is shared.
+      store: Store.memory(),
+    });
+    return Mppx.create({
+      methods: machinePayments.defaultMethods(),
+      secretKey: process.env.MPP_SECRET_KEY,
+      realm: process.env.MPP_REALM || 'freysaai.freysa.dev',
+    });
+  } catch (error) {
+    console.error(`Stripe MPP disabled: ${error.message}`);
+    return null;
+  }
+}
+const stripeMpp = createStripeMpp();
 
 const SearchAgent      = require('./agents/SearchAgent');
 const BrokerAgent      = require('./agents/BrokerAgent');
@@ -1164,6 +1195,31 @@ for (const route of Object.values(ROUTES)) {
       return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
     }
   });
+}
+
+// ─── Optional Stripe MPP Paid Skill Endpoints ────────────────────────────────
+// Stripe MPP methods remain isolated from both native Base x402 and direct Tempo
+// MPP routes. They are registered only when Stripe configuration is complete.
+if (stripeMpp) {
+  for (const route of Object.values(ROUTES)) {
+    const validator = validateSkillInput(route.id);
+    app.post(`/stripe-mpp${route.path}`, paidLimiter, stripeMpp.charge({
+      amount: String(route.priceUsd),
+      currency: 'usd',
+      decimals: 2,
+      description: route.description,
+    }), async (req, res) => {
+      validator(req, res, () => {});
+      if (res.headersSent) return;
+      try {
+        const result = await route.run(req.body || {});
+        usage.record(req, { route: route.id, rail: 'mpp-stripe', outcome: 'settled', amountUsd: route.priceUsd });
+        return res.json({ skill: route.id, paymentProtocol: 'mpp-stripe', ...result });
+      } catch (err) {
+        return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
+      }
+    });
+  }
 }
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
