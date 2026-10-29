@@ -1,102 +1,42 @@
 #!/usr/bin/env node
 /**
- * scripts/list-on-bazaar.js
+ * Verify this merchant's current public Coinbase x402 Bazaar discovery entries.
  *
- * Step 6: Submit this agent to the Coinbase CDP x402 Bazaar.
+ * Bazaar discovery is automatic: a resource becomes eligible after a successful
+ * CDP-facilitated settlement that includes Bazaar metadata. No CDP secret or
+ * listing form is required for this read-only verification.
  *
- * The Bazaar is a public directory of x402-compatible agents. Listing here
- * makes your agent discoverable and callable by other agents on the network.
- *
- * Prerequisites:
- *   - Complete Steps 2-5 first (run scripts/register.js, then node server.js)
- *   - Set CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY in .env
- *     (get these from https://portal.cdp.coinbase.com)
- *   - Set AGENT_SERVER_URL to the public URL of your running server.js
- *     (e.g., https://your-domain.com or a tunneled URL like https://abc123.ngrok.io)
- *
- * Docs: https://docs.cdp.coinbase.com/x402/bazaar
+ * Usage:
+ *   node scripts/list-on-bazaar.js
+ *   BAZAAR_PAY_TO=0x... node scripts/list-on-bazaar.js
  */
-require('dotenv').config();
-const axios = require('axios');
-const manifest = require('../agent-manifest.json');
+'use strict';
 
-const CDP_BAZAAR_API = 'https://api.cdp.coinbase.com/platform/x402/v1/bazaar/listings';
-const AGENT_SERVER_URL = process.env.AGENT_SERVER_URL;
-const CDP_API_KEY_NAME = process.env.CDP_API_KEY_NAME;
-const CDP_API_KEY_PRIVATE_KEY = process.env.CDP_API_KEY_PRIVATE_KEY;
+const PAY_TO = process.env.BAZAAR_PAY_TO || '0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6';
+const ENDPOINT = `https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=${encodeURIComponent(PAY_TO)}`;
 
 async function main() {
-  if (!AGENT_SERVER_URL) {
-    console.error('ERROR: AGENT_SERVER_URL is not set.');
-    console.error('This should be the public URL where your server.js is running.');
-    console.error('Example: https://your-domain.com or https://abc123.ngrok.io');
-    process.exit(1);
+  const response = await fetch(ENDPOINT, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Bazaar lookup failed: HTTP ${response.status}`);
+
+  const catalog = await response.json();
+  const resources = catalog.resources || [];
+  console.log(`Coinbase x402 Bazaar resources for ${catalog.payTo || PAY_TO}: ${resources.length}`);
+  for (const item of resources) {
+    const accept = item.accepts?.[0] || {};
+    const quality = item.quality || {};
+    console.log(`\n- ${item.resource}`);
+    console.log(`  ${accept.network || 'unknown network'} | ${accept.amount || '?'} base units | ${accept.asset || 'unknown asset'}`);
+    console.log(`  ${quality.l30DaysTotalCalls ?? 0} calls / ${quality.l30DaysUniquePayers ?? 0} unique payers in the last 30 days`);
+    console.log(`  Last updated: ${item.lastUpdated || 'unknown'}`);
   }
-  if (!CDP_API_KEY_NAME || !CDP_API_KEY_PRIVATE_KEY) {
-    console.error('ERROR: CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY are not set.');
-    console.error('Get your CDP API key at https://portal.cdp.coinbase.com');
-    process.exit(1);
-  }
 
-  const listing = {
-    name: manifest.name,
-    description: manifest.description,
-    url: AGENT_SERVER_URL,
-    manifestUrl: `${AGENT_SERVER_URL}/manifest`,
-    skills: manifest.skills.map(s => ({
-      id: s.id,
-      name: s.name,
-      description: s.description,
-      endpoint: `${AGENT_SERVER_URL}/skills/${s.id}`,
-      pricing: s.pricing,
-      tags: s.tags,
-    })),
-    payment: manifest.payment,
-    chainId: manifest.chainId,
-    author: typeof manifest.author === 'string' ? manifest.author : manifest.author.name,
-    version: manifest.version,
-    website: manifest.website,
-  };
-
-  console.log('=== Listing on CDP x402 Bazaar ===');
-  console.log('Agent URL:', AGENT_SERVER_URL);
-  console.log('Submitting listing...');
-  console.log('');
-
-  try {
-    // CDP uses API key authentication via a signed JWT or API key header.
-    // The exact auth scheme depends on your CDP key type.
-    // Here we use the API key name + private key pattern from Coinbase CDP docs.
-    const { data } = await axios.post(CDP_BAZAAR_API, listing, {
-      headers: {
-        'Content-Type': 'application/json',
-        // CDP API key auth header — adjust if your key type uses a different scheme
-        'X-Api-Key': CDP_API_KEY_NAME,
-        'X-Api-Secret': CDP_API_KEY_PRIVATE_KEY,
-      },
-      timeout: 20000,
-    });
-
-    console.log('✅ Listed on CDP Bazaar!');
-    console.log('  Listing ID:', data.id || data.listingId);
-    console.log('  View at: https://docs.cdp.coinbase.com/x402/bazaar');
-    console.log('  Direct URL:', data.url || `${CDP_BAZAAR_API}/${data.id}`);
-  } catch (err) {
-    if (err.response) {
-      console.error('❌ CDP Bazaar listing failed.');
-      console.error('  Status:', err.response.status);
-      console.error('  Body:', JSON.stringify(err.response.data, null, 2));
-      console.error('');
-      console.error('  Check the CDP Bazaar docs at https://docs.cdp.coinbase.com/x402/bazaar');
-      console.error('  and verify your CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY are correct.');
-    } else {
-      console.error('❌ Request failed:', err.message);
-    }
-    process.exit(1);
+  if (resources.length === 0) {
+    console.log('\nNo resources are currently indexed. Confirm a real x402 settlement through the CDP facilitator, then allow up to 10 minutes for discovery caching.');
   }
 }
 
-main().catch(err => {
-  console.error('Unexpected error:', err);
-  process.exit(1);
+main().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
 });
