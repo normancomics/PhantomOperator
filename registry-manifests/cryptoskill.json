@@ -1,18 +1,38 @@
 {
   "name": "PhantomOperator",
-  "description": "Automated privacy-removal agent: scans the web for personal data leaks, classifies threats, and submits opt-out requests to data brokers. Payments via Superfluid streaming on Base.",
-  "maintainer": "normancomics",
+  "description": "Authorized privacy and public-exposure analysis for people and AI agents. Includes metadata audits, breach indicators, OPSEC and wallet-hygiene checks, and removal guidance. Does not submit removal requests on a user’s behalf.",
   "baseUrl": "https://freysaai.freysa.dev",
   "manifestUrl": "https://freysaai.freysa.dev/manifest",
-  "agentCard": "https://freysaai.freysa.dev/.well-known/agent.json",
+  "agentCard": "https://freysaai.freysa.dev/.well-known/agent-card.json",
   "openapi": "https://freysaai.freysa.dev/openapi.json",
-  "website": "https://github.com/normancomics/PhantomOperator",
+  "x402Discovery": "https://freysaai.freysa.dev/.well-known/x402",
+  "website": "https://freysaai.freysa.dev",
+  "source": "https://github.com/normancomics/PhantomOperator",
+  "updates": "https://x.com/phntmop",
+  "image": "https://freysaai.freysa.dev/logo.png",
   "skills": [
     {
+      "id": "metadata-audit",
+      "name": "Metadata Privacy Audit",
+      "method": "POST",
+      "path": "/skills/metadata-audit",
+      "priceUsd": 0.05,
+      "description": "Fetch any HTTP/HTTPS URL and extract all metadata that could de-anonymise its author or expose infrastructure details: HTTP response headers, HTML <meta> tags, inline HTML comments, and third-party tracker origins.",
+      "inputs": [
+        {
+          "name": "url",
+          "type": "string",
+          "description": "Absolute HTTP/HTTPS URL to audit"
+        }
+      ]
+    },
+    {
       "id": "threat-scan",
+      "name": "Threat Scan",
       "method": "POST",
       "path": "/skills/threat-scan",
-      "price": "1000000",
+      "priceUsd": 0.1,
+      "description": "Searches the public web for mentions of a person's name that contain PII (phone numbers, email addresses, SSNs, home address). Returns a threat report with severity levels.",
       "inputs": [
         {
           "name": "fullName",
@@ -22,28 +42,32 @@
       ]
     },
     {
-      "id": "data-removal",
+      "id": "breach-check",
+      "name": "Breach & Credential Exposure Check",
       "method": "POST",
-      "path": "/skills/data-removal",
-      "price": "5000000",
+      "path": "/skills/breach-check",
+      "priceUsd": 0.1,
+      "description": "Checks an email address against public breach intelligence (XposedOrNot + HIBP) and optionally checks a password via HIBP k-anonymity SHA-1 range query (only first 5 hex chars transmitted).",
       "inputs": [
         {
-          "name": "threatUrl",
+          "name": "email",
           "type": "string",
-          "description": "URL of the page containing the PII to remove"
+          "description": "Email address to check for breach exposure"
         },
         {
-          "name": "fullName",
+          "name": "password",
           "type": "string",
-          "description": "Full name of the person requesting removal"
+          "description": "Optional plaintext password to check via k-anonymity"
         }
       ]
     },
     {
       "id": "opsec-score",
+      "name": "OPSEC Exposure Score",
       "method": "POST",
       "path": "/skills/opsec-score",
-      "price": "5000000",
+      "priceUsd": 0.25,
+      "description": "Multi-vector operational security exposure assessment. Aggregates public web search, data broker indexing, paste/leak sites, and social media footprint into a scored report (0–100) with grade A–F and prioritised remediation steps.",
       "inputs": [
         {
           "name": "fullName",
@@ -63,69 +87,209 @@
       ]
     },
     {
-      "id": "breach-check",
+      "id": "monero-opsec-audit",
+      "name": "$XMR Monero Cryptographic & Network OPSEC Audit",
       "method": "POST",
-      "path": "/skills/breach-check",
-      "price": "2000000",
+      "path": "/skills/monero-opsec-audit",
+      "priceUsd": 0.25,
+      "description": "Decodes a supplied Monero address, checks its format and public privacy-posture signals, and returns structured guidance with a commitment proof.",
       "inputs": [
         {
-          "name": "email",
+          "name": "xmrAddress",
           "type": "string",
-          "description": "Email address to check against known breach databases (optional)"
+          "description": "Monero Standard (4...), Subaddress (8...), or Integrated address to decode and audit"
         },
         {
-          "name": "password",
+          "name": "txHash",
           "type": "string",
-          "description": "Plaintext password to check via k-anonymity (optional \u2014 hash prefix only transmitted)"
+          "description": "Optional 64-character hex Monero transaction hash to inspect"
+        },
+        {
+          "name": "evmAddress",
+          "type": "string",
+          "description": "Optional EVM address to evaluate EVM <-> $XMR cross-chain correlation risk"
+        },
+        {
+          "name": "swapAmountXmr",
+          "type": "number",
+          "description": "Optional XMR amount to evaluate EAE timing/amount correlation"
+        },
+        {
+          "name": "nodeMode",
+          "type": "string",
+          "description": "Optional node connectivity mode: local / remote-tor / remote-clearnet"
         }
       ]
     },
     {
-      "id": "metadata-audit",
+      "id": "data-removal",
+      "name": "Automated Data Broker Removal & Statutory Takedown",
       "method": "POST",
-      "path": "/skills/metadata-audit",
-      "price": "1000000",
+      "path": "/skills/data-removal",
+      "priceUsd": 0.5,
+      "description": "Matches a supplied, authorized data-broker listing against supported removal paths and generates a reviewable CCPA/GDPR-style request. It does not submit removal requests without explicit authorization.",
       "inputs": [
         {
-          "name": "url",
+          "name": "link",
           "type": "string",
-          "description": "Absolute HTTP/HTTPS URL to audit"
+          "description": "URL of the data broker listing to remove"
+        },
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Full name of the person requesting removal (optional)"
+        }
+      ]
+    },
+    {
+      "id": "wallet-opsec-audit",
+      "name": "EVM & Cross-Chain Wallet Deanonymization Audit",
+      "method": "POST",
+      "path": "/skills/wallet-opsec-audit",
+      "priceUsd": 0.5,
+      "description": "Reviews public Base/EVM wallet hygiene signals, including observable activity and ERC-8004 identity references, and provides privacy recommendations.",
+      "inputs": [
+        {
+          "name": "walletAddress",
+          "type": "string",
+          "description": "0x EVM wallet address to audit"
         }
       ]
     },
     {
       "id": "full-privacy-sweep",
+      "name": "Full Multi-Operator Privacy Sweep",
       "method": "POST",
       "path": "/skills/full-privacy-sweep",
-      "price": "10000000",
+      "priceUsd": 1,
+      "description": "Combines authorized threat scanning, exposure scoring, and data-broker removal guidance into a structured privacy report.",
       "inputs": [
         {
           "name": "fullName",
           "type": "string",
-          "description": "Full name of the person"
+          "description": "Full name of the person to protect"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "description": "Optional email address to include in the sweep"
+        },
+        {
+          "name": "handle",
+          "type": "string",
+          "description": "Optional handle/username to include in the sweep"
         },
         {
           "name": "walletAddress",
           "type": "string",
-          "description": "Wallet address to stream payment from"
+          "description": "Optional EVM wallet address"
+        }
+      ]
+    },
+    {
+      "id": "cypherpunk-redteam-dossier",
+      "name": "Cypherpunk Red-Team & $XMR Sovereign Dossier (Pro Tier)",
+      "method": "POST",
+      "path": "/skills/cypherpunk-redteam-dossier",
+      "priceUsd": 5,
+      "description": "Combines selected, authorized metadata, public-exposure, breach, wallet, and Monero privacy modules into a structured dossier.",
+      "inputs": [
+        {
+          "name": "fullName",
+          "type": "string",
+          "description": "Target name or organization (authorized assessment)"
         },
         {
-          "name": "flowRate",
+          "name": "email",
           "type": "string",
-          "description": "Superfluid flow rate in wei/second"
+          "description": "Email address for breach & OSINT correlation"
+        },
+        {
+          "name": "url",
+          "type": "string",
+          "description": "Target web URL for metadata & header audit"
+        },
+        {
+          "name": "walletAddress",
+          "type": "string",
+          "description": "Optional 0x EVM wallet address"
+        },
+        {
+          "name": "xmrAddress",
+          "type": "string",
+          "description": "Optional $XMR Monero address/subaddress"
+        }
+      ]
+    },
+    {
+      "id": "sovereign-opsec-retainer",
+      "name": "Sovereign Enterprise OPSEC & Zero-Trace Architecture Package",
+      "method": "POST",
+      "path": "/skills/sovereign-opsec-retainer",
+      "priceUsd": 25,
+      "description": "Produces an organization-level, authorized privacy and operational-security assessment package; it is not a managed retainer or financial service.",
+      "inputs": [
+        {
+          "name": "organization",
+          "type": "string",
+          "description": "Organization, DAO, or principal name"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "description": "Primary security/principal email"
+        },
+        {
+          "name": "url",
+          "type": "string",
+          "description": "Primary domain HTTP/HTTPS URL"
+        },
+        {
+          "name": "walletAddress",
+          "type": "string",
+          "description": "Primary treasury or operational 0x EVM address"
+        },
+        {
+          "name": "xmrAddress",
+          "type": "string",
+          "description": "Optional $XMR settlement subaddress"
+        }
+      ]
+    },
+    {
+      "id": "spam-caller-removal",
+      "name": "Spam Caller-ID Removal Guidance",
+      "method": "POST",
+      "path": "/skills/spam-caller-removal",
+      "priceUsd": 0.1,
+      "description": "Prepare official caller-ID unlisting and spam-label dispute steps for an authorized phone number. Does not submit requests.",
+      "inputs": [
+        {
+          "name": "phoneNumber",
+          "type": "string",
+          "description": "Authorized phone number in international format"
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "description": "Optional: truecaller, hiya, robokiller, or whitepages"
+        },
+        {
+          "name": "authorized",
+          "type": "boolean",
+          "description": "Must be true to confirm authorization"
         }
       ]
     }
   ],
   "payment": {
-    "chain": "base",
-    "chainId": 8453,
+    "protocol": "x402",
+    "network": "eip155:8453",
+    "chain": "Base",
+    "asset": "USDC",
     "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
-    "protocols": [
-      "x402"
-    ]
+    "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
   },
-  "version": "1.0.0",
-  "walletAddress": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6"
+  "version": "1.1.0",
+  "erc8004AgentId": 821239
 }
