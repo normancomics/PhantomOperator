@@ -241,6 +241,20 @@ function validateSkillInput(skillId) {
         break;
       }
 
+      case 'spam-caller-removal': {
+        const phone = String(body.phoneNumber || '').replace(/[\s().-]/g, '');
+        if (!/^\+?[1-9]\d{6,14}$/.test(phone)) {
+          return res.status(400).json({ error: 'phoneNumber is required and must be in international format.' });
+        }
+        if (body.authorized !== true) {
+          return res.status(400).json({ error: 'authorized must be true; only request guidance for your own number or an authorized client.' });
+        }
+        if (body.provider !== undefined && !['truecaller', 'hiya', 'robokiller', 'whitepages'].includes(body.provider)) {
+          return res.status(400).json({ error: 'provider must be truecaller, hiya, robokiller, or whitepages.' });
+        }
+        break;
+      }
+
       case 'wallet-opsec-audit': {
         if (!isNonEmptyString(body.walletAddress, 64) || !EVM_ADDRESS_RE.test(body.walletAddress.trim())) {
           return res.status(400).json({

@@ -13,6 +13,13 @@
 
 const crypto = require('crypto');
 
+const CALLER_ID_PROVIDERS = [
+  { id: 'truecaller', name: 'Truecaller', removalUrl: 'https://www.truecaller.com/unlisting', notes: 'Deactivate the Truecaller account first. Spam-labelled numbers may not be eligible for unlisting.', expectedDays: 1 },
+  { id: 'hiya', name: 'Hiya', removalUrl: 'https://apphelp.hiya.com/en/articles/38-your-data-and-privacy', notes: 'Use Hiya data-management tools; proof of ownership may be required.', expectedDays: 30 },
+  { id: 'robokiller', name: 'RoboKiller', removalUrl: 'https://support.robokiller.com/hc/en-us/articles/37870138815892-My-number-is-incorrectly-marked-as-spam-What-should-I-do', notes: 'Use the Global Blacklist removal request for incorrectly flagged legitimate numbers.', expectedDays: null },
+  { id: 'whitepages', name: 'Whitepages', removalUrl: 'https://www.whitepages.com/suppression-requests', notes: 'Submit the listing URL through the suppression tool. Removal affects Whitepages-controlled records only.', expectedDays: 3 },
+];
+
 const BROKER_PATTERNS = [
   { domain: 'spokeo.com',                name: 'Spokeo',                optOutUrl: 'https://www.spokeo.com/optout',                         privacyEmail: 'privacy@spokeo.com',                slaDays: 3 },
   { domain: 'whitepages.com',            name: 'Whitepages',            optOutUrl: 'https://www.whitepages.com/suppression-requests',       privacyEmail: 'privacy@whitepages.com',            slaDays: 5 },
@@ -124,8 +131,8 @@ class BrokerAgent {
 
       return {
         broker: brokerName,
-        status: 'submitted',
-        detail: `Opt-out request queued for ${brokerName} (${link}). Direct suppression portal: ${matched.optOutUrl}`,
+        status: 'prepared',
+        detail: `Removal guidance prepared for ${brokerName} (${link}). Submit directly through: ${matched.optOutUrl}`,
         trackingId,
         optOutUrl: matched.optOutUrl,
         privacyEmail: matched.privacyEmail,
@@ -137,5 +144,25 @@ class BrokerAgent {
     }
   }
 }
+
+/**
+ * Produce official removal/dispute steps for caller-ID and spam-label services.
+ * This function never submits on a user's behalf; the authorization flag records
+ * that the caller is requesting guidance for their own number or an authorized client.
+ */
+BrokerAgent.prepareCallerIdRemoval = async ({ phoneNumber, provider, authorized }) => {
+  if (!authorized) throw new Error('Explicit authorization is required for caller-ID removal guidance.');
+  const normalized = String(phoneNumber || '').replace(/[\s().-]/g, '');
+  if (!/^\+?[1-9]\d{6,14}$/.test(normalized)) throw new Error('phoneNumber must be a valid international-format phone number.');
+  const selected = provider ? CALLER_ID_PROVIDERS.filter((p) => p.id === provider) : CALLER_ID_PROVIDERS;
+  if (provider && selected.length === 0) throw new Error('Unsupported provider. Use truecaller, hiya, robokiller, or whitepages.');
+  return {
+    status: 'prepared',
+    phoneNumber: normalized,
+    authorizationRequired: true,
+    disclaimer: 'PhantomOperator provides official removal/dispute steps only. The user must submit and complete each provider process; caches and third-party datasets may remain.',
+    providers: selected.map((p) => ({ ...p, request: `Request removal or dispute for the authorized number ${normalized}.` })),
+  };
+};
 
 module.exports = BrokerAgent;

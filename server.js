@@ -195,6 +195,24 @@ const ROUTES = {
     outputExample: { skill: 'data-removal', broker: 'Spokeo', status: 'submitted', optOutUrl: 'https://www.spokeo.com/optout', estimatedCompletionDays: 3 },
     run: (b) => BrokerAgent.removeThreat({ link: b.link.trim(), fullName: b.fullName ? b.fullName.trim() : undefined }),
   },
+  'spam-caller-removal': {
+    id: 'spam-caller-removal',
+    path: '/skills/spam-caller-removal',
+    priceUsd: 0.10,
+    description: 'Prepare official caller-ID unlisting and spam-label dispute steps for an authorized phone number across Truecaller, Hiya, RoboKiller, and Whitepages. Does not submit requests.',
+    bodySchema: {
+      type: 'object',
+      required: ['phoneNumber', 'authorized'],
+      properties: {
+        phoneNumber: { type: 'string', description: 'Authorized phone number in international format, e.g. +15551234567' },
+        provider: { type: 'string', enum: ['truecaller', 'hiya', 'robokiller', 'whitepages'], description: 'Optional provider; omit to receive all supported official paths' },
+        authorized: { type: 'boolean', description: 'Must be true to confirm authority to request this guidance' },
+      },
+    },
+    inputExample: { phoneNumber: '+15551234567', authorized: true },
+    outputExample: { skill: 'spam-caller-removal', status: 'prepared', providers: [{ id: 'truecaller', removalUrl: 'https://www.truecaller.com/unlisting' }] },
+    run: (b) => BrokerAgent.prepareCallerIdRemoval({ phoneNumber: b.phoneNumber, provider: b.provider, authorized: b.authorized }),
+  },
   'wallet-opsec-audit': {
     id: 'wallet-opsec-audit',
     path: '/skills/wallet-opsec-audit',
