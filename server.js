@@ -474,6 +474,7 @@ function renderLandingHtml(base) {
         <textarea id="payloadBox" rows="5">{"url": "https://example.com"}</textarea>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
           <button class="btn" onclick="invokeSkill()">View payment terms</button>
+          <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMetadataPreview()">Try free metadata preview</button>
           <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMoneroDemo()">View a free sample report</button>
         </div>
         <p class="sub">Only submit information you are authorized to assess. Do not submit passwords, seed phrases, private keys, or another person's personal data without permission. <a href="/terms">Terms and data-handling limits</a>.</p>
@@ -544,6 +545,19 @@ function renderLandingHtml(base) {
         out.textContent = "Error: " + e.message;
       }
     }
+    async function runFreeMetadataPreview() {
+      const out = document.getElementById('consoleOut');
+      let payload;
+      try { payload = JSON.parse(document.getElementById('payloadBox').value); } catch { out.textContent = 'Enter valid JSON with a public URL first, e.g. {"url":"https://example.com"}.'; return; }
+      if (!payload.url) { out.textContent = 'Enter a public URL first, e.g. {"url":"https://example.com"}.'; return; }
+      out.textContent = 'Running free metadata preview…';
+      try {
+        const res = await fetch('/preview/metadata-audit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: payload.url }) });
+        const data = await res.json();
+        out.textContent = 'HTTP ' + res.status + ' (Free Preview)\\n' + JSON.stringify(data, null, 2);
+      } catch (e) { out.textContent = 'Error: ' + e.message; }
+    }
+
     async function runFreeMoneroDemo() {
       const out = document.getElementById('consoleOut');
       out.textContent = "Loading a free sample privacy report...";
