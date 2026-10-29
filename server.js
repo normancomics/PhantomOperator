@@ -76,11 +76,15 @@ app.set('trust proxy', 1);
 app.use(corsHeaders);
 app.use(securityHeaders);
 app.use(bodySizeGuard);
-app.use(express.json({ limit: '16kb' }));
+const configuredMaxBodyBytes = parseInt(process.env.MAX_BODY_BYTES || '16384', 10);
+const maxBodyBytes = Number.isSafeInteger(configuredMaxBodyBytes) && configuredMaxBodyBytes > 0
+  ? configuredMaxBodyBytes
+  : 16384;
+app.use(express.json({ limit: maxBodyBytes }));
 
 app.use((err, _req, res, next) => {
   if (err && err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Payload Too Large', message: 'Request body must not exceed 16 KB.' });
+    return res.status(413).json({ error: 'Payload Too Large', message: `Request body must not exceed ${maxBodyBytes} bytes.` });
   }
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({ error: 'Invalid JSON in request body.' });

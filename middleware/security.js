@@ -15,7 +15,7 @@
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-  : ['*'];
+  : []; // Same-origin by default; explicitly opt in to browser cross-origin callers.
 
 function corsHeaders(req, res, next) {
   const origin = req.headers.origin;
@@ -52,7 +52,7 @@ function securityHeaders(_req, res, next) {
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src *; frame-ancestors 'self'"
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
   );
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -282,7 +282,10 @@ function validateSkillInput(skillId) {
 
 // ─── Body Size Guard ─────────────────────────────────────────────────────────
 
-const MAX_BODY_BYTES = 16 * 1024;
+const configuredMaxBodyBytes = parseInt(process.env.MAX_BODY_BYTES || '16384', 10);
+const MAX_BODY_BYTES = Number.isSafeInteger(configuredMaxBodyBytes) && configuredMaxBodyBytes > 0
+  ? configuredMaxBodyBytes
+  : 16384;
 
 function bodySizeGuard(req, res, next) {
   const len = parseInt(req.headers['content-length'] || '0', 10);
