@@ -2,9 +2,9 @@
   "schemaVersion": "1.0",
   "name": "PhantomOperator",
   "description": "Authorized privacy and public-exposure analysis agent. Provides structured web metadata audits, public-web exposure checks, breach indicators, data-broker removal guidance, EVM wallet hygiene checks, and Monero address privacy posture. Pay per call in native USDC on Base via x402; MPP Tempo OUSD is optional.",
-  "url": "http://127.0.0.1:34180",
+  "url": "https://freysaai.freysa.dev",
   "version": "1.1.0",
-  "iconUrl": "http://127.0.0.1:34180/logo.png",
+  "iconUrl": "https://freysaai.freysa.dev/logo.png",
   "provider": {
     "organization": "normancomics",
     "url": "https://github.com/normancomics/PhantomOperator",
@@ -41,7 +41,7 @@
       "id": "metadata-audit",
       "name": "metadata-audit",
       "description": "Audit an HTTP/HTTPS URL for metadata leaks: server/framework headers, author/generator meta tags, HTML comments, and third-party trackers.",
-      "endpoint": "http://127.0.0.1:34180/skills/metadata-audit",
+      "endpoint": "https://freysaai.freysa.dev/skills/metadata-audit",
       "method": "POST",
       "priceUsd": 0.05,
       "inputExample": {
@@ -52,7 +52,7 @@
       "id": "threat-scan",
       "name": "threat-scan",
       "description": "Scan public web search results for PII exposure (phone numbers, emails, SSN patterns, physical addresses) linked to a full name.",
-      "endpoint": "http://127.0.0.1:34180/skills/threat-scan",
+      "endpoint": "https://freysaai.freysa.dev/skills/threat-scan",
       "method": "POST",
       "priceUsd": 0.1,
       "inputExample": {
@@ -63,7 +63,7 @@
       "id": "breach-check",
       "name": "breach-check",
       "description": "Keyless email breach intelligence lookup (XposedOrNot + HIBP) and optional k-anonymity SHA-1 password exposure check.",
-      "endpoint": "http://127.0.0.1:34180/skills/breach-check",
+      "endpoint": "https://freysaai.freysa.dev/skills/breach-check",
       "method": "POST",
       "priceUsd": 0.1,
       "inputExample": {
@@ -74,7 +74,7 @@
       "id": "opsec-score",
       "name": "opsec-score",
       "description": "Multi-vector OPSEC exposure score (0-100, grade A-F) across web search, data brokers, paste sites, and social profiles, with prioritised remediation.",
-      "endpoint": "http://127.0.0.1:34180/skills/opsec-score",
+      "endpoint": "https://freysaai.freysa.dev/skills/opsec-score",
       "method": "POST",
       "priceUsd": 0.25,
       "inputExample": {
@@ -85,7 +85,7 @@
       "id": "monero-opsec-audit",
       "name": "monero-opsec-audit",
       "description": "Cryptonote Base58 + Keccak-256 Monero ($XMR) address/subaddress decoder (Spend Key, View Key, network byte, checksum), live $XMR RingCT network telemetry, EVM <-> $XMR swap correlation check, and Merkle Mountain Range (MMR) commitment proof.",
-      "endpoint": "http://127.0.0.1:34180/skills/monero-opsec-audit",
+      "endpoint": "https://freysaai.freysa.dev/skills/monero-opsec-audit",
       "method": "POST",
       "priceUsd": 0.25,
       "inputExample": {
@@ -97,7 +97,7 @@
       "id": "data-removal",
       "name": "data-removal",
       "description": "Automated data-broker opt-out matcher (24+ brokers) + statutory CCPA § 1798.105 / GDPR Art. 17 / CA Delete Act legal erasure demand generator.",
-      "endpoint": "http://127.0.0.1:34180/skills/data-removal",
+      "endpoint": "https://freysaai.freysa.dev/skills/data-removal",
       "method": "POST",
       "priceUsd": 0.5,
       "inputExample": {
@@ -109,7 +109,7 @@
       "id": "spam-caller-removal",
       "name": "spam-caller-removal",
       "description": "Prepare official caller-ID unlisting and spam-label dispute steps for an authorized phone number across Truecaller, Hiya, RoboKiller, and Whitepages. Does not submit requests.",
-      "endpoint": "http://127.0.0.1:34180/skills/spam-caller-removal",
+      "endpoint": "https://freysaai.freysa.dev/skills/spam-caller-removal",
       "method": "POST",
       "priceUsd": 0.1,
       "inputExample": {
@@ -121,7 +121,7 @@
       "id": "wallet-opsec-audit",
       "name": "wallet-opsec-audit",
       "description": "On-chain Base/EVM wallet deanonymization & hygiene audit (nonce graph density, balance fingerprint, ERC-8004 identity check, and deterministic $XMR settlement subaddress).",
-      "endpoint": "http://127.0.0.1:34180/skills/wallet-opsec-audit",
+      "endpoint": "https://freysaai.freysa.dev/skills/wallet-opsec-audit",
       "method": "POST",
       "priceUsd": 0.5,
       "inputExample": {
@@ -132,7 +132,7 @@
       "id": "full-privacy-sweep",
       "name": "full-privacy-sweep",
       "description": "End-to-end multi-operator privacy sweep: runs Threat Scan, OPSEC Exposure Score, Data Broker Removal dossier generation, and $XMR sovereign subaddress derivation.",
-      "endpoint": "http://127.0.0.1:34180/skills/full-privacy-sweep",
+      "endpoint": "https://freysaai.freysa.dev/skills/full-privacy-sweep",
       "method": "POST",
       "priceUsd": 1,
       "inputExample": {
@@ -144,7 +144,7 @@
       "id": "cypherpunk-redteam-dossier",
       "name": "cypherpunk-redteam-dossier",
       "description": "Comprehensive 6-operator Cypherpunk Red-Team Dossier: Web Metadata Audit + OSINT Threat Scan + Breach Check + OPSEC Score + EVM Wallet Hygiene + $XMR Monero Cryptonote Audit + MMR Cryptographic Attestation.",
-      "endpoint": "http://127.0.0.1:34180/skills/cypherpunk-redteam-dossier",
+      "endpoint": "https://freysaai.freysa.dev/skills/cypherpunk-redteam-dossier",
       "method": "POST",
       "priceUsd": 5,
       "inputExample": {
@@ -158,7 +158,7 @@
       "id": "sovereign-opsec-retainer",
       "name": "sovereign-opsec-retainer",
       "description": "Full-spectrum Enterprise & DAO Zero-Trace OPSEC Retainer Package: Multi-vector OSINT + Web Metadata + Credential Breach + Treasury EVM Clustering + $XMR Atomic-Swap Treasury Isolation Blueprint + Statutory CCPA/GDPR Takedown Binder.",
-      "endpoint": "http://127.0.0.1:34180/skills/sovereign-opsec-retainer",
+      "endpoint": "https://freysaai.freysa.dev/skills/sovereign-opsec-retainer",
       "method": "POST",
       "priceUsd": 25,
       "inputExample": {
