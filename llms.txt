@@ -1,6 +1,6 @@
 # PhantomOperator
 
-> Sovereign privacy, OPSEC, and Monero intelligence agent. Audits public-web metadata leaks, PII exposure, breach indicators, data-broker opt-out workflows, EVM-wallet privacy, and Monero Cryptonote/RingCT OPSEC. Paid per call with native USDC on Base through x402.
+> Authorized privacy and public-exposure analysis for people and agents: public-web metadata, breach indicators, data-removal guidance, caller-ID removal guidance, EVM wallet hygiene, and Monero address posture. Paid per call with native USDC on Base through x402.
 
 - [Agent index](/): discovery and skill catalogue
 - [Skills](/skills): priced callable skills
@@ -14,6 +14,7 @@
 - [Usage](/usage): privacy-preserving aggregate settled-call telemetry
 - [Health](/health): liveness
 - [Terms](/terms): service terms
+- [X / @phntmop](https://x.com/phntmop): product updates and launch announcements
 
 ## Payment
 
@@ -30,4 +31,4 @@ MPP equivalents are available at `POST /mpp/skills/*` with Tempo OUSD. They issu
 
 ## Primary skills
 
-`threat-scan`, `data-removal`, `full-privacy-sweep`, `opsec-score`, `breach-check`, `metadata-audit`, `monero-opsec-audit`, `wallet-opsec-audit`, `cypherpunk-redteam-dossier`, and `sovereign-opsec-retainer`.
+`threat-scan`, `data-removal`, `spam-caller-removal`, `full-privacy-sweep`, `opsec-score`, `breach-check`, `metadata-audit`, `monero-opsec-audit`, `wallet-opsec-audit`, `cypherpunk-redteam-dossier`, and `sovereign-opsec-retainer`.

@@ -17,6 +17,8 @@
 
 **Source:** [github.com/normancomics/PhantomOperator](https://github.com/normancomics/PhantomOperator)
 
+**Updates:** [@phntmop on X](https://x.com/phntmop)
+
 | Resource | URL |
 | --- | --- |
 | Human landing page | [/](/) |

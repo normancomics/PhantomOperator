@@ -11,7 +11,8 @@
     "name": "normancomics",
     "ens": "normancomics.eth",
     "baseEns": "normancomics.base.eth",
-    "superfluidIdentity": "normancomics.reserve.superfluid.eth"
+    "superfluidIdentity": "normancomics.reserve.superfluid.eth",
+    "x": "https://x.com/phntmop"
   },
   "agentWallet": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
   "chainId": 8453,
@@ -693,5 +694,8 @@
     "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
     "cryptoSkillUrl": "https://cryptoskill.org",
     "bazaarUrl": "https://api.cdp.coinbase.com/platform/v2/x402"
+  },
+  "social": {
+    "x": "https://x.com/phntmop"
   }
 }

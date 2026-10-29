@@ -493,6 +493,7 @@ function renderLandingHtml(base) {
           <li><a href="/llms.txt">/llms.txt</a> &amp; <a href="/SKILL.md">/SKILL.md</a> — LLM Documentation</li>
           <li><a href="/health">/health</a> — Real-time Health &amp; Telemetry</li>
           <li><a href="/usage">/usage</a> — Privacy-preserving live settlement totals</li>
+          <li><a href="https://x.com/phntmop" rel="noopener noreferrer">@phntmop on X</a> — Product updates and examples</li>
         </ul>
         <div class="addr-box" style="border-color:rgba(255,102,0,0.4);">
           <strong style="color:var(--orange)">Scope and limitations</strong><br/>
@@ -718,6 +719,7 @@ app.get('/.well-known/agent-card.json', publicLimiter, (req, res) => {
     provider: {
       organization: manifest.author.name,
       url: 'https://github.com/normancomics/PhantomOperator',
+      social: 'https://x.com/phntmop',
     },
     capabilities: {
       streaming: false,

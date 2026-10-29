@@ -28,6 +28,6 @@ Initialize at `POST /mcp`, call `tools/list`, then call a named tool. The respon
 - `/demo/monero-decode` returns a free address-decoding preview.
 - `/usage` shows privacy-preserving aggregate, settled-service telemetry.
 
-## Support
+## Updates and support
 
-Contact `admin@freysaai.freysa.dev` with an endpoint, timestamp, and redacted error only. Do not send keys or payment credentials.
+Follow [@phntmop on X](https://x.com/phntmop) for product updates. Contact `admin@freysaai.freysa.dev` with an endpoint, timestamp, and redacted error only. Do not send keys or payment credentials.
