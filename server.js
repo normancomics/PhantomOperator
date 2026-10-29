@@ -711,7 +711,20 @@ app.get('/.well-known/agent-tools-verify.txt', (_req, res) => {
 app.get(['/.well-known/x402', '/.well-known/x402.json'], publicLimiter, (req, res) => {
   const b = baseUrl(req);
   const routes = Object.values(ROUTES);
-  res.json({
+  // Some directories require a Bazaar-shaped manifest with per-resource
+  // `accepts[]`; retain the established canonical document at /x402.
+  if (req.path.endsWith('.json')) {
+    return res.json({
+      x402Version: 2,
+      name: manifest.name,
+      description: manifest.description,
+      resources: routes.map((r) => {
+        const accept = x402.requirements(r, b);
+        return { resource: accept.resource, url: accept.resource, description: r.description, accepts: [accept] };
+      }),
+    });
+  }
+  return res.json({
     version: 1,
     x402Version: 2,
     agent: manifest.name,
@@ -720,7 +733,6 @@ app.get(['/.well-known/x402', '/.well-known/x402.json'], publicLimiter, (req, re
     network: x402.NETWORK,
     asset: x402.USDC_BASE,
     erc8004AgentId: Number(process.env.ERC8004_AGENT_ID || 821239),
-    ...(process.env.AGENT_TOOLS_VERIFY ? { agentToolsVerify: process.env.AGENT_TOOLS_VERIFY } : {}),
     resources: routes.map((r) => `${b}${r.path}`),
     skillDetails: routes.map((r) => ({
       url: `${b}${r.path}`,
