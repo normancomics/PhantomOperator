@@ -486,7 +486,7 @@ function renderLandingHtml(base) {
           <strong style="color:var(--cyan)">Free preview complete.</strong> The $0.05 full audit adds the complete findings, detailed headers and trackers, and remediation guidance for this URL.<br/>
           <button class="btn-sm" style="margin-top:9px" onclick="upgradePreviewToFullAudit()">View full-audit payment terms — $0.05 USDC on Base</button>
         </div>
-        <p class="sub">Only submit information you are authorized to assess. Do not submit passwords, seed phrases, private keys, or another person's personal data without permission. <a href="/terms">Terms and data-handling limits</a>.</p>
+        <p class="sub">Only submit information you are authorized to assess. Do not submit passwords, seed phrases, private keys, or another person's personal data without permission. <a href="/privacy">Privacy model</a> and <a href="/terms">terms</a>.</p>
         <pre id="consoleOut">// Select a check, inspect its exact terms, or view a free sample report.</pre>
       </div>
 
@@ -638,6 +638,7 @@ app.get('/', publicLimiter, (req, res) => {
       agentRegistration: `${b}/.well-known/agent-registration.json`,
       llmsTxt: `${b}/llms.txt`,
       skillMd: `${b}/SKILL.md`,
+      privacy: `${b}/privacy`,
       terms: `${b}/terms`,
       usage: `${b}/usage`,
     },
@@ -982,6 +983,12 @@ app.get('/sample-report', publicLimiter, (_req, res) => {
 
 app.get('/status', publicLimiter, (_req, res) => {
   res.json({ status: 'operational', health: '/health', usage: '/usage', updatedAt: new Date().toISOString() });
+});
+
+app.get('/privacy', publicLimiter, (_req, res) => {
+  const p = path.join(__dirname, 'PRIVACY.md');
+  if (fs.existsSync(p)) return res.type('text/markdown').sendFile(p);
+  return res.status(404).type('text/plain').send('Privacy model is unavailable.');
 });
 
 app.get('/terms', publicLimiter, (_req, res) => {
