@@ -442,6 +442,10 @@ function renderLandingHtml(base) {
       background: #060a12; border: 1px solid rgba(0,245,212,0.3); border-radius: 8px;
       padding: 10px 12px; font-size: 0.8rem; margin: 10px 0; word-break: break-all;
     }
+    .preview-result { background:#060a12; border:1px solid rgba(0,245,212,0.3); border-radius:8px; padding:14px; margin:10px 0; }
+    .preview-result h3 { color:var(--cyan); font-size:.92rem; margin:0 0 8px; }
+    .finding { border-top:1px solid var(--border); padding:8px 0; font-size:.82rem; }
+    .risk { display:inline-block; border-radius:5px; padding:1px 6px; background:rgba(255,102,0,.16); color:var(--orange); font-weight:700; margin-right:7px; }
   </style>
 </head>
 <body>
@@ -494,6 +498,7 @@ function renderLandingHtml(base) {
           <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMetadataPreview()">Try free metadata preview</button>
           <button class="btn-sm" style="background:#1e293b;color:#e2e8f0;" onclick="runFreeMoneroDemo()">View a free sample report</button>
         </div>
+        <div id="previewHumanResult" class="preview-result" hidden aria-live="polite"></div>
         <div id="previewUpgrade" class="addr-box" hidden>
           <strong style="color:var(--cyan)">Free preview complete.</strong> The $0.05 full audit adds the complete findings, detailed headers and trackers, and remediation guidance for this URL.<br/>
           <button class="btn-sm" style="margin-top:9px" onclick="upgradePreviewToFullAudit()">View full-audit payment terms — $0.05 USDC on Base</button>
@@ -573,8 +578,28 @@ function renderLandingHtml(base) {
         out.textContent = "Error: " + e.message;
       }
     }
+    function renderPreviewSummary(data) {
+      const box = document.getElementById('previewHumanResult');
+      if (!data || !data.preview) { box.hidden = true; return; }
+      box.replaceChildren();
+      const title = document.createElement('h3');
+      title.textContent = 'Free preview for ' + data.url;
+      const summary = document.createElement('p');
+      summary.className = 'sub';
+      summary.textContent = 'Exposure signal: ' + String(data.overallRisk || 'unknown').toUpperCase() + '. Showing ' + data.findings.length + ' limited finding(s).';
+      box.append(title, summary);
+      for (const finding of data.findings) {
+        const row = document.createElement('div'); row.className = 'finding';
+        const risk = document.createElement('span'); risk.className = 'risk'; risk.textContent = String(finding.riskLevel || 'review').toUpperCase();
+        row.append(risk, document.createTextNode(finding.label || finding.category || 'Public exposure signal'));
+        box.append(row);
+      }
+      box.hidden = false;
+    }
+
     async function runFreeMetadataPreview() {
       const out = document.getElementById('consoleOut');
+      document.getElementById('previewHumanResult').hidden = true;
       let payload;
       try { payload = JSON.parse(document.getElementById('payloadBox').value); } catch { out.textContent = 'Enter valid JSON with a public URL first, e.g. {"url":"https://example.com"}.'; return; }
       if (!payload.url) { out.textContent = 'Enter a public URL first, e.g. {"url":"https://example.com"}.'; return; }
@@ -583,6 +608,7 @@ function renderLandingHtml(base) {
         const res = await fetch('/preview/metadata-audit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: payload.url }) });
         const data = await res.json();
         out.textContent = 'HTTP ' + res.status + ' (Free Preview)\\n' + JSON.stringify(data, null, 2);
+        renderPreviewSummary(res.ok ? data : null);
         document.getElementById('previewUpgrade').hidden = !res.ok;
       } catch (e) { out.textContent = 'Error: ' + e.message; document.getElementById('previewUpgrade').hidden = true; }
     }
