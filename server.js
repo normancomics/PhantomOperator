@@ -1072,6 +1072,7 @@ app.post('/preview/metadata-audit', previewLimiter, async (req, res) => {
     const report = await MetadataAgent.audit(url.trim());
     // Preview proves usefulness without returning a full paid report or raw page details.
     const previewFindings = report.findings.slice(0, 3).map(({ category, riskLevel, label, field }) => ({ category, riskLevel, label, field }));
+    usage.record(req, { route: 'metadata-audit', rail: 'free', outcome: 'preview_completed' });
     return res.json({
       preview: true,
       url: report.url,
@@ -1208,6 +1209,7 @@ for (const route of Object.values(ROUTES)) {
       : await x402.verify(req, route, b);
     if (!v.ok) {
       if (useMonero) return res.status(v.status).json({ error: v.message });
+      if (v.status === 402) usage.record(req, { route: route.id, rail: 'x402-base-usdc', outcome: 'payment_quote', amountUsd: route.priceUsd });
       return res.status(v.status).set(v.headers || {}).json(v.body);
     }
     validator(req, res, () => {});
