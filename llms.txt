@@ -1,6 +1,6 @@
 # PhantomOperator
 
-> Authorized privacy and public-exposure analysis for people and agents: public-web metadata, breach indicators, data-removal guidance, caller-ID removal guidance, EVM wallet hygiene, and Monero address posture. Paid per call with native USDC on Base through x402.
+> Authorized privacy and public-exposure analysis for people and agents: public-web metadata, breach indicators, data-removal guidance, caller-ID removal guidance, EVM wallet hygiene, and Monero address posture. Includes a free, rate-limited metadata preview; paid calls use USDC on Base through x402.
 
 - [Agent index](/): discovery and skill catalogue
 - [Skills](/skills): priced callable skills
@@ -18,15 +18,13 @@
 
 ## Payment
 
-Each `POST /skills/*` endpoint returns HTTP 402 before payment. Network: `eip155:8453` (Base). Asset: native USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`. Settlement receiver: `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`.
-
-MPP equivalents are available at `POST /mpp/skills/*` with Tempo OUSD. They issue a standard `WWW-Authenticate: Payment` challenge and return a `Payment-Receipt` after settlement.
+Each `POST /skills/*` endpoint returns HTTP 402 before payment. Network: `eip155:8453` (Base). Asset: USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`. Settlement receiver: `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`.
 
 ## Agent invocation
 
 1. Fetch `/openapi.json` or `/.well-known/x402` and select an authorized skill.
 2. Send a JSON request to the route. Inspect the HTTP 402 challenge and its exact amount, receiver, asset, network, and expiry.
-3. Pay using a compatible x402 or MPP client, retry with the protocol credential, and validate the JSON response against the OpenAPI schema.
+3. Pay using a compatible x402 client, retry with the protocol credential, and validate the JSON response against the OpenAPI schema.
 4. Do not submit passwords, seed phrases, private keys, or data you are not authorized to assess.
 
 ## Primary skills

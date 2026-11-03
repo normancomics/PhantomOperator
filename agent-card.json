@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "name": "PhantomOperator",
-  "description": "Authorized privacy and public-exposure analysis agent. Provides structured web metadata audits, public-web exposure checks, breach indicators, data-broker removal guidance, EVM wallet hygiene checks, and Monero address privacy posture. Pay per call in native USDC on Base via x402; MPP Tempo OUSD is optional.",
+  "description": "Authorized privacy and public-exposure analysis agent. Provides structured web metadata audits, public-web exposure checks, breach indicators, data-broker removal guidance, EVM wallet hygiene checks, and Monero address privacy posture. Includes a free rate-limited metadata preview; paid calls settle in USDC on Base via x402.",
   "url": "https://freysaai.freysa.dev",
   "version": "1.1.0",
   "iconUrl": "https://freysaai.freysa.dev/logo.png",
@@ -15,7 +15,41 @@
     "pushNotifications": false,
     "stateTransitionHistory": false,
     "x402Payments": true,
-    "moneroCryptonoteAudit": true
+    "moneroCryptonoteAudit": true,
+    "extensions": [
+      {
+        "uri": "https://a2a-registry.org/extensions/registry/v1",
+        "description": "Registry identity and Base-USDC x402 payment capabilities",
+        "required": false,
+        "params": {
+          "identity": {
+            "provider": "github",
+            "username": "normancomics",
+            "packageName": "github.normancomics.phantomoperator"
+          },
+          "payment": {
+            "model": "freemium",
+            "protocols": ["x402"],
+            "direction": "inbound",
+            "rails": [{
+              "network": "base",
+              "token": "USDC",
+              "type": "stablecoin",
+              "protocol": "x402",
+              "caip2": "eip155:8453",
+              "contractAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "feeModel": "low",
+              "settlementTime": "fast"
+            }],
+            "meta": {
+              "freePreview": "POST /preview/metadata-audit (rate limited)",
+              "settlement": "onchain",
+              "refundPolicy": "not charged when execution fails before settlement"
+            }
+          }
+        }
+      }
+    ]
   },
   "authentication": {
     "schemes": [

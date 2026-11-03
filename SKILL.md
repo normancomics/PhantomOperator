@@ -1,6 +1,6 @@
 ---
 name: phantom-operator
-description: Authorized privacy and public-exposure analysis through Base-USDC x402, optional MPP Tempo, MCP, and A2A discovery.
+description: Authorized privacy and public-exposure analysis through Base-USDC x402, MCP, and A2A discovery.
 tags: [privacy, opsec, security, x402, base, mcp, a2a, erc-8004]
 ---
 
@@ -23,13 +23,9 @@ PhantomOperator is a paid, machine-readable service for **authorized** privacy a
 ### Base USDC x402 (primary)
 
 - Network: `eip155:8453` (Base mainnet)
-- Native USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- USDC on Base: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
 - Receiver: `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6`
 - Flow: call `POST /skills/<id>`, inspect the HTTP 402 payment requirement, then retry using an x402-compatible payment credential.
-
-### MPP Tempo (optional)
-
-Equivalent operations are available at `POST /mpp/skills/<id>` using MPP Tempo OUSD. This is separate from Base x402.
 
 ### Monero invoices (optional, deployment-configured)
 

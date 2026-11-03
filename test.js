@@ -55,7 +55,7 @@ async function runServerTests() {
     const alias = await request(34567, 'GET', '/.well-known/agent.json');
     assert.strictEqual(alias.status, 308);
     const llms = (await request(34567, 'GET', '/llms.txt')).body;
-    assert.ok(llms.includes('native USDC on Base') && !llms.includes('USDCx on Base'));
+    assert.ok(llms.includes('USDC on Base') && !llms.includes('USDCx on Base') && !llms.includes('MPP equivalents are available'));
     assert.ok(JSON.parse(unpaid.body).accepts[0].outputSchema);
     assert.strictEqual((await request(34567, 'OPTIONS', '/skills/opsec-score')).status, 204);
   });

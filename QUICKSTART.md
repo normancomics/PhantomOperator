@@ -6,9 +6,7 @@ PhantomOperator provides authorized privacy and public-exposure checks for peopl
 
 1. Read the current operation schema at `/openapi.json`.
 2. Use only data you are authorized to assess. Never send secrets, seed phrases, or passwords.
-3. Choose one payment rail:
-   - **Base x402:** `POST /skills/<skill>` with native Base USDC.
-   - **MPP Tempo:** `POST /mpp/skills/<skill>` with Tempo OUSD.
+3. Use the currently active payment rail: **Base x402** — `POST /skills/<skill>` with USDC on Base.
 
 ## x402 flow
 

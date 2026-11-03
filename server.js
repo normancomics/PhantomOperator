@@ -38,7 +38,10 @@ const usage   = require('./lib/usage');
 const moneroBilling = require('./lib/monero-billing');
 
 const MPP_TEMPO_OUSD = '0x20c0000000000000000000006a37DA5C996874BE';
-const mpp = Mppx.create({
+// Tempo MPP is disabled unless explicitly configured and tested. Do not advertise
+// a payment rail that can return an unusable payment challenge.
+const MPP_TEMPO_ENABLED = process.env.ENABLE_MPP_TEMPO === 'true' && Boolean(process.env.MPP_SECRET_KEY);
+const mpp = MPP_TEMPO_ENABLED ? Mppx.create({
   methods: [tempo.charge({
     currencies: [MPP_TEMPO_OUSD],
     recipient: x402.PAY_TO,
@@ -46,7 +49,7 @@ const mpp = Mppx.create({
   })],
   secretKey: process.env.MPP_SECRET_KEY,
   realm: process.env.MPP_REALM || 'freysaai.freysa.dev',
-});
+}) : null;
 
 
 const SearchAgent      = require('./agents/SearchAgent');
@@ -454,17 +457,26 @@ function renderLandingHtml(base) {
       <div class="pill-row">
         <span class="pill">x402 v2 Exact (USDC)</span>
         <span class="pill">Base (eip155:8453)</span>
-        <span class="pill">MPP Tempo</span>
         <span class="pill">MCP + A2A</span>
       </div>
     </header>
 
+    <div class="card" style="margin-bottom:20px; border-color:rgba(0,245,212,0.55);">
+      <h2><span>Check what your website publicly reveals</span></h2>
+      <p style="margin-top:0; color:var(--muted);">Paste a website URL for a free, limited privacy preview. It checks public headers, metadata, HTML comments, and tracker signals. Findings are signals for review—not proof of compromise.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+        <input id="quickUrl" inputmode="url" autocomplete="url" placeholder="https://your-site.example" aria-label="Website URL for free metadata preview" style="flex:1;min-width:240px;margin:0;" />
+        <button class="btn" onclick="runQuickPreview()">Run free preview</button>
+        <a class="btn-sm" style="background:#1e293b;color:#e2e8f0;padding:10px 16px;" href="/sample-report">View sample report</a>
+      </div>
+      <p class="sub" style="margin-bottom:0;">Free preview: up to 5 per client per hour. A full metadata audit costs $0.05 USDC on Base after you review the payment terms.</p>
+    </div>
+
     <div class="card" style="margin-bottom:20px;">
-      <h2><span>Understand your public exposure before it becomes a problem</span></h2>
-      <p style="margin-top:0; color:var(--muted);">Start with a transparent payment quote, then run an authorized privacy, metadata, breach, or wallet-hygiene check. Results identify observable risks and recommended next steps; they do not replace legal, security, or identity-verification advice.</p>
+      <h2><span>Authorized privacy checks for people and agents</span></h2>
       <div class="grid" style="margin:0;">
         <div><strong>For people</strong><br/><span class="sub">Check public metadata, known breach exposure, data-broker listing matches, and wallet-hygiene signals.</span></div>
-        <div><strong>For agents</strong><br/><span class="sub">Use OpenAPI, MCP, A2A, x402 Base USDC, or MPP Tempo routes with machine-readable terms.</span></div>
+        <div><strong>For developers</strong><br/><span class="sub">Integrate through OpenAPI, MCP, A2A, and x402 Base-USDC payment terms.</span></div>
       </div>
     </div>
 
@@ -492,7 +504,7 @@ function renderLandingHtml(base) {
 
       <div class="card">
         <h2><span>For agent builders</span> <span>ERC-8004 #821239</span></h2>
-        <p style="font-size:0.84rem; color:var(--muted); margin-top:0;">Use a standard discovery document or the MCP endpoint. Base x402 uses native USDC; MPP uses Tempo OUSD. Each paid request first returns verifiable payment terms.</p>
+        <p style="font-size:0.84rem; color:var(--muted); margin-top:0;">Use a standard discovery document or the MCP endpoint. Paid calls use USDC on Base through x402; each request first returns verifiable payment terms.</p>
         <ul style="font-size:0.84rem; padding-left:18px;">
           <li><a href="/.well-known/x402">/.well-known/x402</a> — x402 v2 payment requirements &amp; Bazaar schemas</li>
           <li><a href="/.well-known/agent-card.json">/.well-known/agent-card.json</a> — A2A Agent Card</li>
@@ -527,6 +539,13 @@ function renderLandingHtml(base) {
 
   <script>
     const EXAMPLES = ${JSON.stringify(Object.fromEntries(Object.values(ROUTES).map((r) => [r.id, { example: r.inputExample, price: r.priceUsd }])))};
+
+    function runQuickPreview() {
+      const url = document.getElementById('quickUrl').value.trim();
+      if (!url) { document.getElementById('consoleOut').textContent = 'Enter a public HTTPS URL first.'; return; }
+      selectSkill('metadata-audit', { url }, 0.05);
+      runFreeMetadataPreview();
+    }
 
     function selectSkill(id, example, price) {
       document.getElementById('skillSelect').value = id;
@@ -772,6 +791,22 @@ app.get('/.well-known/agent-card.json', publicLimiter, (req, res) => {
       stateTransitionHistory: false,
       x402Payments: true,
       moneroCryptonoteAudit: true,
+      extensions: [{
+        uri: 'https://a2a-registry.org/extensions/registry/v1',
+        description: 'Registry identity and Base-USDC x402 payment capabilities',
+        required: false,
+        params: {
+          identity: { provider: 'github', username: 'normancomics', packageName: 'github.normancomics.phantomoperator' },
+          payment: {
+            model: 'freemium',
+            protocols: ['x402'],
+            direction: 'inbound',
+            rails: [{ network: 'base', token: 'USDC', type: 'stablecoin', protocol: 'x402', caip2: x402.NETWORK, contractAddress: x402.USDC_BASE, feeModel: 'low', settlementTime: 'fast' }],
+            skills: Object.values(ROUTES).map((r) => ({ skillId: r.id, price: r.priceUsd.toFixed(2), currency: 'USDC', unit: 'call' })),
+            meta: { freePreview: 'POST /preview/metadata-audit (rate limited)', settlement: 'onchain', refundPolicy: 'not charged when execution fails before settlement' },
+          },
+        },
+      }],
     },
     authentication: {
       schemes: ['x402'],
@@ -846,7 +881,7 @@ app.get('/.well-known/agent-registration.json', publicLimiter, (req, res) => {
         network: x402.NETWORK,
         asset: x402.USDC_BASE,
       },
-      {
+      ...(MPP_TEMPO_ENABLED ? [{
         name: 'MPP',
         endpoint: `${b}/openapi.json`,
         version: '1.0',
@@ -854,7 +889,7 @@ app.get('/.well-known/agent-registration.json', publicLimiter, (req, res) => {
         currency: 'OUSD',
         currencyAddress: MPP_TEMPO_OUSD,
         pathsPrefix: '/mpp/skills',
-      },
+      }] : []),
       {
         name: 'agentWallet',
         endpoint: `eip155:8453:${x402.PAY_TO}`,
@@ -894,25 +929,26 @@ app.get('/openapi.json', publicLimiter, (req, res) => {
         },
       },
     };
-    // MPP is an additional, separately-addressable rail so native MPP clients
-    // receive a standard WWW-Authenticate: Payment challenge without changing
-    // the existing Base x402 endpoint contract.
-    paths[`/mpp${r.path}`] = {
-      post: {
-        operationId: `mpp-${r.id}`,
-        summary: `${r.id} (MPP)`,
-        description: `${r.description} (MPP Tempo OUSD price: $${r.priceUsd.toFixed(2)} to ${x402.PAY_TO})`,
-        'x-payment-info': {
-          price: { mode: 'fixed', currency: 'USD', amount: String(r.priceUsd.toFixed(2)) },
-          protocols: [{ mpp: { method: 'tempo', currency: MPP_TEMPO_OUSD, recipient: x402.PAY_TO } }],
+    if (MPP_TEMPO_ENABLED) {
+      // MPP is separately addressable so native MPP clients receive their own
+      // payment challenge without changing the Base x402 contract.
+      paths[`/mpp${r.path}`] = {
+        post: {
+          operationId: `mpp-${r.id}`,
+          summary: `${r.id} (MPP)`,
+          description: `${r.description} (MPP Tempo OUSD price: $${r.priceUsd.toFixed(2)} to ${x402.PAY_TO})`,
+          'x-payment-info': {
+            price: { mode: 'fixed', currency: 'USD', amount: String(r.priceUsd.toFixed(2)) },
+            protocols: [{ mpp: { method: 'tempo', currency: MPP_TEMPO_OUSD, recipient: x402.PAY_TO } }],
+          },
+          requestBody: { required: true, content: { 'application/json': { schema: r.bodySchema, example: r.inputExample } } },
+          responses: {
+            '200': { description: 'Skill execution result with MPP Payment-Receipt' },
+            '402': { description: 'MPP Payment Required (Tempo OUSD)' },
+          },
         },
-        requestBody: { required: true, content: { 'application/json': { schema: r.bodySchema, example: r.inputExample } } },
-        responses: {
-          '200': { description: 'Skill execution result with MPP Payment-Receipt' },
-          '402': { description: 'MPP Payment Required (Tempo OUSD)' },
-        },
-      },
-    };
+      };
+    }
   }
   res.json({
     openapi: '3.1.0',
@@ -920,7 +956,7 @@ app.get('/openapi.json', publicLimiter, (req, res) => {
       title: manifest.name,
       version: manifest.version,
       description: manifest.description,
-      'x-guidance': 'Use POST /skills/* for Base USDC x402 payments, or POST /mpp/skills/* for MPP Tempo OUSD payments. Send JSON matching the route schema. A 402 response contains the payment challenge; retry with the protocol credential. Only submit data you are authorized to assess.',
+      'x-guidance': 'Use POST /skills/* for Base USDC x402 payments. Send JSON matching the route schema. A 402 response contains the payment challenge; retry with the protocol credential. Only submit data you are authorized to assess.',
       contact: { name: manifest.author.name, email: 'admin@freysaai.freysa.dev', url: 'https://github.com/normancomics/PhantomOperator' },
     },
     servers: [
@@ -1018,7 +1054,7 @@ app.post('/preview/metadata-audit', previewLimiter, async (req, res) => {
       findingCounts: report.findingCounts,
       findings: previewFindings,
       findingsTruncated: report.findings.length > previewFindings.length,
-      limits: { perClientPerHour: Number(process.env.RATE_LIMIT_PREVIEW || '5'), fullDetailsRequire: 'POST /skills/metadata-audit via Base USDC x402 or POST /mpp/skills/metadata-audit via MPP Tempo' },
+      limits: { perClientPerHour: Number(process.env.RATE_LIMIT_PREVIEW || '5'), fullDetailsRequire: 'POST /skills/metadata-audit via Base-USDC x402' },
     });
   } catch (err) { return res.status(400).json({ error: `Preview unavailable: ${err.message}` }); }
 });
@@ -1180,20 +1216,22 @@ for (const route of Object.values(ROUTES)) {
 // ─── MPP Paid Skill Endpoints (Tempo OUSD) ───────────────────────────────────
 // Kept on /mpp/ routes so MPP and existing Base x402 clients can each use their
 // native 402 headers and facilitator without protocol ambiguity.
-for (const route of Object.values(ROUTES)) {
-  const validator = validateSkillInput(route.id);
-  app.post(`/mpp${route.path}`, paidLimiter, validator, mpp.charge({
-    amount: String(route.priceUsd),
-    description: route.description,
-  }), async (req, res) => {
-    try {
-      const result = await route.run(req.body || {});
-      usage.record(req, { route: route.id, rail: 'mpp-tempo', outcome: 'settled', amountUsd: route.priceUsd });
-      return res.json({ skill: route.id, paymentProtocol: 'mpp-tempo', ...result });
-    } catch (err) {
-      return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
-    }
-  });
+if (MPP_TEMPO_ENABLED) {
+  for (const route of Object.values(ROUTES)) {
+    const validator = validateSkillInput(route.id);
+    app.post(`/mpp${route.path}`, paidLimiter, validator, mpp.charge({
+      amount: String(route.priceUsd),
+      description: route.description,
+    }), async (req, res) => {
+      try {
+        const result = await route.run(req.body || {});
+        usage.record(req, { route: route.id, rail: 'mpp-tempo', outcome: 'settled', amountUsd: route.priceUsd });
+        return res.json({ skill: route.id, paymentProtocol: 'mpp-tempo', ...result });
+      } catch (err) {
+        return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
+      }
+    });
+  }
 }
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────

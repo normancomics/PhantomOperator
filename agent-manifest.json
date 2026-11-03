@@ -3,7 +3,7 @@
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "PhantomOperator",
   "handle": "normancomics.base.eth",
-  "description": "Authorized privacy and public-exposure analysis agent. Provides structured web metadata audits, public-web exposure checks, breach indicators, data-broker removal guidance, EVM wallet hygiene checks, and Monero address privacy posture. Pay per call in native USDC on Base via x402; MPP Tempo OUSD is optional.",
+  "description": "Authorized privacy and public-exposure analysis agent. Provides structured web metadata audits, public-web exposure checks, breach indicators, data-broker removal guidance, EVM wallet hygiene checks, and Monero address privacy posture. Includes a free rate-limited metadata preview; paid calls settle in USDC on Base via x402.",
   "version": "1.1.0",
   "active": true,
   "x402Support": true,
@@ -667,8 +667,7 @@
   "payment": {
     "protocol": "x402",
     "protocols": [
-      "x402",
-      "mpp-tempo"
+      "x402"
     ],
     "x402Version": 2,
     "scheme": "exact",
@@ -680,12 +679,6 @@
     "payTo": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
     "receiver": "0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6",
     "facilitator": "https://api.cdp.coinbase.com/platform/v2/x402",
-    "mpp": {
-      "method": "tempo",
-      "currency": "OUSD",
-      "currencyAddress": "0x20c0000000000000000000006a37DA5C996874BE",
-      "pathsPrefix": "/mpp/skills"
-    },
     "superfluidSubgraph": "https://protocol-v1-base-mainnet.subgraph.cf.superfluid.dev",
     "terms": "/terms"
   },

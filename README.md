@@ -37,14 +37,14 @@
 
 ## Payments
 
-### Primary rail: Base native USDC via x402
+### Working paid rail: Base USDC via x402
 
 Paid routes at `POST /skills/*` use x402 v2 exact payments.
 
 | Field | Value |
 | --- | --- |
 | Network | Base mainnet, `eip155:8453` |
-| Asset | Native Base USDC |
+| Asset | USDC on Base |
 | USDC contract | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
 | Payment receiver | `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6` |
 | Production facilitator | Coinbase CDP x402 |
@@ -52,10 +52,6 @@ Paid routes at `POST /skills/*` use x402 v2 exact payments.
 | ERC-8004 identity registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
 
 An unpaid valid request receives HTTP `402 Payment Required`. An x402-compatible client signs the stated payment requirement and retries the same request. Never send a plain ERC-20 transfer as a substitute for the x402 payment credential.
-
-### Optional secondary rail: MPP Tempo OUSD
-
-Equivalent routes are available at `POST /mpp/skills/*` through MPP with Tempo OUSD. This is a separate optional rail; it is **not** required to use Base USDC x402.
 
 ### Optional privacy rail: Monero invoices
 
