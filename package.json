@@ -1,7 +1,7 @@
 {
   "name": "phantom-operator",
   "version": "1.1.0",
-  "description": "Authorized privacy and public-exposure analysis service with Base-USDC x402 and optional MPP payments",
+  "description": "Authorized privacy and public-exposure analysis service with a free preview and Base-USDC x402 payments",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

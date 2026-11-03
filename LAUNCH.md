@@ -4,7 +4,7 @@ Use only from accounts and communities you control. Do not claim marketplace acc
 
 ## Short post
 
-> I built PhantomOperator: an authorized privacy/public-exposure API for agents and people. Start with a free, rate-limited metadata preview; full audits settle in native USDC on Base via x402. MCP, A2A, OpenAPI, and ERC-8004 included.
+> I built PhantomOperator: an authorized privacy/public-exposure API for agents and people. Start with a free, rate-limited metadata preview; full audits settle in USDC on Base via x402. MCP, A2A, OpenAPI, and ERC-8004 included.
 >
 > https://freysaai.freysa.dev/quickstart
 
