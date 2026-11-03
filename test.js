@@ -6,7 +6,7 @@ const PhantomOperatorCore = require('./PhantomOperatorCore');
 function request(port, method, path, body) {
   return new Promise((resolve, reject) => {
     const req = http.request(
-      { host: '127.0.0.1', port, method, path, headers: { 'Content-Type': 'application/json' } },
+      { host: '127.0.0.1', port, method, path, headers: { 'Content-Type': 'application/json', 'X-PhantomOperator-Test': '1' } },
       res => {
         let data = '';
         res.on('data', c => (data += c));
