@@ -32,7 +32,8 @@ require('dotenv').config();
 const path    = require('path');
 const fs      = require('fs');
 const express = require('express');
-const { Mppx, tempo } = require('mppx/express');
+const crypto = require('crypto');
+const { Mppx, tempo, stripe } = require('mppx/express');
 const x402    = require('./lib/x402');
 const usage   = require('./lib/usage');
 const moneroBilling = require('./lib/monero-billing');
@@ -41,6 +42,10 @@ const MPP_TEMPO_OUSD = '0x20c0000000000000000000006a37DA5C996874BE';
 // Tempo MPP is disabled unless explicitly configured and tested. Do not advertise
 // a payment rail that can return an unusable payment challenge.
 const MPP_TEMPO_ENABLED = process.env.ENABLE_MPP_TEMPO === 'true' && Boolean(process.env.MPP_SECRET_KEY);
+const STRIPE_MPP_ENABLED = process.env.ENABLE_STRIPE_MPP === 'true'
+  && Boolean(process.env.STRIPE_SECRET_KEY)
+  && Boolean(process.env.STRIPE_PROFILE_ID);
+if (MPP_TEMPO_ENABLED && STRIPE_MPP_ENABLED) throw new Error('Enable only one MPP settlement rail at a time.');
 const mpp = MPP_TEMPO_ENABLED ? Mppx.create({
   methods: [tempo.charge({
     currencies: [MPP_TEMPO_OUSD],
@@ -50,7 +55,21 @@ const mpp = MPP_TEMPO_ENABLED ? Mppx.create({
   secretKey: process.env.MPP_SECRET_KEY,
   realm: process.env.MPP_REALM || 'freysaai.freysa.dev',
 }) : null;
-
+// Stripe MPP uses single-use Shared Payment Tokens (SPTs). Its payment secret is
+// deterministically derived from the Stripe key; direct Stripe calls require a
+// $0.50 minimum, so it is a separate rail from the $0.05 Base x402 routes.
+const stripeMpp = STRIPE_MPP_ENABLED ? Mppx.create({
+  methods: [stripe.charge({
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    networkId: process.env.STRIPE_PROFILE_ID,
+    paymentMethodTypes: ['card', 'link'],
+    currency: 'usd',
+    decimals: 2,
+  })],
+  secretKey: crypto.createHmac('sha256', process.env.STRIPE_SECRET_KEY).update('mpp-challenge-signing').digest('base64'),
+  realm: process.env.MPP_REALM || 'freysaai.freysa.dev',
+}) : null;
+const STRIPE_MPP_MIN_USD = 0.50;
 
 const SearchAgent      = require('./agents/SearchAgent');
 const BrokerAgent      = require('./agents/BrokerAgent');
@@ -1255,6 +1274,27 @@ if (MPP_TEMPO_ENABLED) {
         const result = await route.run(req.body || {});
         usage.record(req, { route: route.id, rail: 'mpp-tempo', outcome: 'settled', amountUsd: route.priceUsd });
         return res.json({ skill: route.id, paymentProtocol: 'mpp-tempo', ...result });
+      } catch (err) {
+        return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
+      }
+    });
+  }
+}
+
+// Stripe MPP direct-card rail. It is intentionally registered only with explicit
+// Stripe configuration, so an unavailable processor can never produce a false
+// payment promise. Stripe's minimum is $0.50, independent of Base x402 prices.
+if (STRIPE_MPP_ENABLED) {
+  for (const route of Object.values(ROUTES)) {
+    const validator = validateSkillInput(route.id);
+    app.post(`/mpp/skills/${route.id}`, paidLimiter, validator, stripeMpp.charge({
+      amount: Math.max(STRIPE_MPP_MIN_USD, route.priceUsd).toFixed(2),
+      description: `PhantomOperator ${route.id}`,
+    }), async (req, res) => {
+      try {
+        const result = await route.run(req.body || {});
+        usage.record(req, { route: route.id, rail: 'mpp-stripe', outcome: 'settled', amountUsd: Math.max(STRIPE_MPP_MIN_USD, route.priceUsd) });
+        return res.json({ skill: route.id, paymentProtocol: 'mpp-stripe', ...result });
       } catch (err) {
         return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
       }
