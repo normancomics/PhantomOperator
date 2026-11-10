@@ -3,6 +3,7 @@
 [![Live service](https://img.shields.io/badge/live-freysaai.freysa.dev-00b894?style=flat-square)](https://freysaai.freysa.dev/status)
 [![x402](https://img.shields.io/badge/x402-Base%20native%20USDC-0052FF?style=flat-square)](https://freysaai.freysa.dev/.well-known/x402)
 [![MCP](https://img.shields.io/badge/MCP-remote%20server-7C3AED?style=flat-square)](https://freysaai.freysa.dev/mcp)
+[![PhantomOperator MCP server](https://mcprush.com/badge/phantomoperator-mcp/card.svg)](https://mcprush.com/to/phantomoperator-mcp?ref=badge)
 [![A2A](https://img.shields.io/badge/A2A-agent%20card-FF6B35?style=flat-square)](https://freysaai.freysa.dev/.well-known/agent-card.json)
 [![ERC--8004](https://img.shields.io/badge/ERC--8004-agent%20%23821239-627EEA?style=flat-square)](https://freysaai.freysa.dev/.well-known/agent-registration.json)
 [![License](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
