@@ -37,6 +37,8 @@ const { Mppx, tempo, stripe } = require('mppx/express');
 const x402    = require('./lib/x402');
 const usage   = require('./lib/usage');
 const moneroBilling = require('./lib/monero-billing');
+const { CreditLedger } = require('./lib/credits');
+const stripeCheckout = require('./lib/stripe-checkout');
 
 const MPP_TEMPO_OUSD = '0x20c0000000000000000000006a37DA5C996874BE';
 // Tempo MPP is disabled unless explicitly configured and tested. Do not advertise
@@ -95,6 +97,25 @@ const mcpTools = require('./mcp/tools.json');
 
 const app = express();
 app.set('trust proxy', 1);
+const creditLedger = new CreditLedger(process.env.CREDIT_LEDGER_DB || path.join(__dirname, 'data', 'credits.sqlite'));
+
+// Stripe requires the exact raw body for webhook signature verification. This
+// route must remain before express.json(). It is disabled until explicitly configured.
+app.post('/billing/stripe/webhook', express.raw({ type: 'application/json', limit: '64kb' }), (req, res) => {
+  if (!stripeCheckout.configured()) return res.status(404).json({ error: 'Stripe credits are not enabled.' });
+  try {
+    const event = stripeCheckout.verifyWebhook(req.body.toString('utf8'), req.headers['stripe-signature']);
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+      const session = event.data && event.data.object;
+      const purchaseId = session && session.metadata && session.metadata.purchase_id;
+      if (!purchaseId || session.payment_status !== 'paid') throw new Error('Paid checkout event is missing verified purchase data.');
+      creditLedger.fulfillStripePurchase(purchaseId, session.id, session.amount_total);
+    }
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    return res.status(400).json({ error: 'Stripe webhook rejected.', detail: error.message });
+  }
+});
 
 app.use(corsHeaders);
 app.use(securityHeaders);
@@ -117,6 +138,32 @@ app.use((err, _req, res, next) => {
 
 const baseUrl = (req) =>
   process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+
+// Human card checkout. The browser receives the bearer credit token once and
+// retains it locally; the server persists only its hash and grants value only
+// after Stripe's signed webhook confirms payment.
+app.post('/billing/stripe/checkout', paidLimiter, async (req, res) => {
+  if (!stripeCheckout.configured()) return res.status(503).json({ error: 'Stripe prepaid credits are not enabled yet.' });
+  const amountCents = req.body && req.body.amountCents;
+  try {
+    stripeCheckout.assertAmount(amountCents);
+    const purchaseId = crypto.randomBytes(24).toString('base64url');
+    const creditToken = creditLedger.createToken();
+    creditLedger.createPendingStripePurchase(purchaseId, creditToken, amountCents);
+    const checkout = await stripeCheckout.createCheckout({ purchaseId, amountCents, publicBaseUrl: baseUrl(req) });
+    creditLedger.attachStripeSession(purchaseId, checkout.id);
+    return res.status(201).json({ checkoutUrl: checkout.url, creditToken, amountCents, note: 'Store the credit token safely. Credits are granted only after Stripe confirms payment.' });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/billing/credits/balance', paidLimiter, (req, res) => {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const balance = creditLedger.balance(token);
+  if (!balance) return res.status(404).json({ error: 'Credit token not found.' });
+  return res.json({ balanceCents: balance.balanceCents, balanceUsd: (balance.balanceCents / 100).toFixed(2), issuedAt: balance.issuedAt, updatedAt: balance.updatedAt });
+});
 
 // ─── Complete Route & Skill Registry (x402 v2 + Bazaar Metadata) ─────────────
 
