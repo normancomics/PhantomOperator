@@ -1307,6 +1307,31 @@ for (const route of Object.values(ROUTES)) {
   });
 }
 
+// ─── Stripe prepaid-credit skill endpoints ───────────────────────────────────
+// Credits are debited atomically before execution and refunded if the service
+// cannot produce a result. This rail is enabled only after signed Stripe
+// Checkout fulfillment is configured.
+if (stripeCheckout.configured()) {
+  for (const route of Object.values(ROUTES)) {
+    const validator = validateSkillInput(route.id);
+    app.post(`/credits${route.path}`, paidLimiter, validator, async (req, res) => {
+      const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      const amountCents = Math.round(route.priceUsd * 100);
+      let debited = false;
+      try {
+        debited = creditLedger.debit(token, amountCents, route.id);
+        if (!debited) return res.status(402).json({ error: 'Insufficient prepaid credit balance.' });
+        const result = await route.run(req.body || {});
+        usage.record(req, { route: route.id, rail: 'stripe-prepaid-credit', outcome: 'settled', amountUsd: route.priceUsd });
+        return res.json({ skill: route.id, paymentProtocol: 'stripe-prepaid-credit', ...result });
+      } catch (error) {
+        if (debited) { try { creditLedger.refund(token, amountCents, route.id); } catch { /* preserve original failure */ } }
+        return res.status(500).json({ error: `${route.id} failed`, detail: error.message });
+      }
+    });
+  }
+}
+
 // ─── MPP Paid Skill Endpoints (Tempo OUSD) ───────────────────────────────────
 // Kept on /mpp/ routes so MPP and existing Base x402 clients can each use their
 // native 402 headers and facilitator without protocol ambiguity.
