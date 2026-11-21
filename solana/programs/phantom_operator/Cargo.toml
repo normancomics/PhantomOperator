@@ -17,7 +17,7 @@ no-entrypoint = []
 test-sbf = []
 
 [dependencies]
-borsh = "0.10"
+borsh = "1.6"
 solana-program = "1.18"
 
 [dev-dependencies]
