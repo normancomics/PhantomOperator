@@ -106,10 +106,9 @@ Do not activate deposits, mint Base supply, or create a Base-USDC pool until all
 
 **Recorded Base liquidity policy:** `$0` current budget; up to `$250 USDC` only after independent review, a successful owner-authorized migration rehearsal, and demonstrated product usage. Maximum acceptable loss is the full `$250`.
 
-**Still required before implementation:**
+**Recorded migration window policy:** publish at least 30 days before activation; keep the one-way migration open for 180 days; allow an extension only through a 2-of-3 migration-Safe decision announced publicly at least 30 days before the prior window expires. After final closure, no new Base migration mints are permitted and final reconciliation must be published.
 
-1. Choose a public migration window/expiry, or explicitly designate it open-ended with a future 2-of-3-Safe governance closure procedure.
-2. Approve a named independent auditor/review process.
+**Still required before implementation:** approve a named independent auditor/review process.
 
 The signer addresses above are migration governance inputs only. They must not be substituted for the published Base-USDC x402 payment receiver or used to imply payment authorization.
 
