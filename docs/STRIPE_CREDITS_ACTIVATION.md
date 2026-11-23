@@ -15,7 +15,7 @@ Enable Stripe-hosted card/Link Checkout for reusable PhantomOperator prepaid cre
 
 ## Configuration (local only)
 
-Run the interactive zero-echo setup script directly on the PhantomOperator host over SSH (it validates your Stripe key via stdin, writes `.env` with `chmod 600`, runs `node scripts/verify-stripe-credits.js`, and restarts `phantomoperator.service`):
+Run the interactive zero-echo setup script directly on the PhantomOperator host over SSH. If you press Enter at the webhook secret prompt, it automatically creates the webhook endpoint via `POST https://api.stripe.com/v1/webhook_endpoints` (`Stripe-Version: 2026-11-18.endive`) for `checkout.session.completed` and `checkout.session.async_payment_succeeded`, captures the returned `whsec_...` signing secret, writes `.env` with `chmod 600`, runs `node scripts/verify-stripe-credits.js`, and restarts `phantomoperator.service`:
 
 ```bash
 cd /home/nixos/PhantomOperator
