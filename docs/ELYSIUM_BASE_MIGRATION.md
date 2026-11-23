@@ -91,13 +91,24 @@ Do not activate deposits, mint Base supply, or create a Base-USDC pool until all
 - No token acceptance for PhantomOperator services until a reliable quote/settlement design exists.
 - No Base-USDC liquidity pool creation without explicit capital authorization.
 
-## Required owner decisions before implementation
+## Owner decisions recorded on 2026-11-23
 
-1. Choose the public naming: `PHNTMOP (Base)` / `Wrapped PHNTMOP` / another transparent name.
-2. Name at least three independent migration Safe signers and the signature threshold.
-3. Set migration ratio and whether all holders are eligible.
-4. Set a Base liquidity budget and maximum acceptable loss; do not use operational revenue or service-payment funds implicitly.
-5. Approve a named independent auditor/review process.
+- **Public Base asset name/ticker:** `$PHNTMOP`.
+- **Migration ratio:** `1 Elysium PHNTMOP : 1 Base PHNTMOP`.
+- **Proposed migration-Safe signers:**
+  1. `0xC5f20C3Ad7B730B34620ecF39c2C5681482A6Cd6` — PhantomOperator operational wallet.
+  2. `0x050f74E4591F9897FdB311C8150c07dFFfbEf5e1` — Freysa EOA.
+  3. `0x3d95D4A6DbaE0Cd0643a82b13A13b08921D6ADf7` — supplied as `normancomics.eth` signer address.
+
+**Recorded migration-Safe threshold:** `2-of-3`. Any two of the listed signers must approve a migration mint; no signer can act alone.
+
+**Still required before implementation:**
+
+1. Confirm whether every Elysium holder is eligible for the one-way migration and whether any migration window/expiry applies.
+2. Confirm the proposed Base liquidity policy: `$0` current budget; up to `$250 USDC` only after independent review, a successful owner-authorized migration rehearsal, and demonstrated product usage; maximum acceptable loss is the full `$250`.
+3. Approve a named independent auditor/review process.
+
+The signer addresses above are migration governance inputs only. They must not be substituted for the published Base-USDC x402 payment receiver or used to imply payment authorization.
 
 ## Current diligence evidence and limitations
 
