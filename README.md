@@ -36,6 +36,8 @@
 | Service status | [/status](https://freysaai.freysa.dev/status) |
 | Terms and scope | [/terms](https://freysaai.freysa.dev/terms) |
 | Elysium → Base migration design | [`docs/ELYSIUM_BASE_MIGRATION.md`](docs/ELYSIUM_BASE_MIGRATION.md) |
+| Website Privacy Baseline launch specification | [`docs/WEBSITE_PRIVACY_BASELINE.md`](docs/WEBSITE_PRIVACY_BASELINE.md) |
+| Agent guide: metadata-audit | [`docs/METADATA_AUDIT_AGENT_GUIDE.md`](docs/METADATA_AUDIT_AGENT_GUIDE.md) |
 
 ## Payments
 
