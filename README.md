@@ -35,6 +35,7 @@
 | Aggregate service telemetry | [/usage](https://freysaai.freysa.dev/usage) |
 | Service status | [/status](https://freysaai.freysa.dev/status) |
 | Terms and scope | [/terms](https://freysaai.freysa.dev/terms) |
+| Elysium → Base migration design | [`docs/ELYSIUM_BASE_MIGRATION.md`](docs/ELYSIUM_BASE_MIGRATION.md) |
 
 ## Payments
 
