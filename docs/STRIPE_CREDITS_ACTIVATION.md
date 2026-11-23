@@ -15,7 +15,14 @@ Enable Stripe-hosted card/Link Checkout for reusable PhantomOperator prepaid cre
 
 ## Configuration (local only)
 
-From the PhantomOperator host, the owner stores the following in the protected local `.env` file (never commit it):
+Run the interactive zero-echo setup script directly on the PhantomOperator host over SSH (it validates your Stripe key via stdin, writes `.env` with `chmod 600`, runs `node scripts/verify-stripe-credits.js`, and restarts `phantomoperator.service`):
+
+```bash
+cd /home/nixos/PhantomOperator
+./setup-stripe-credits.sh
+```
+
+Or manually store the following in the protected local `.env` file (never commit it):
 
 ```text
 STRIPE_SECRET_KEY=...

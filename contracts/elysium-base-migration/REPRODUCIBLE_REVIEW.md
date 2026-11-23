@@ -110,6 +110,8 @@ Pre-audit baseline:
 
 Repo & 3-minute reproducible review guide:
 https://github.com/normancomics/PhantomOperator/blob/main/contracts/elysium-base-migration/REPRODUCIBLE_REVIEW.md
+Public review thread (post sign-offs & non-sensitive findings here):
+https://github.com/normancomics/PhantomOperator/issues/14
 Security policy & attribution:
 https://github.com/normancomics/PhantomOperator/blob/main/SECURITY.md
 ```

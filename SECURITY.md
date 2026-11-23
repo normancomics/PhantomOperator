@@ -7,6 +7,7 @@ PhantomOperator welcomes independent security review of both its web/API payment
 The Elysium → Base `$PHNTMOP` migration contracts (`163` lines of production Solidity across two files) are currently in **pre-deployment review**. Neither contract has been deployed to Elysium mainnet (`99901`) or Base mainnet (`8453`), and zero Base liquidity will be seeded until external review and a public 2-of-3 Safe rehearsal are completed.
 
 - **Review bundle & reproduction commands**: [`contracts/elysium-base-migration/REPRODUCIBLE_REVIEW.md`](./contracts/elysium-base-migration/REPRODUCIBLE_REVIEW.md)
+- **Public review tracking thread**: [`GitHub Issue #14`](https://github.com/normancomics/PhantomOperator/issues/14)
 - **Auditor brief & threat model**: [`contracts/elysium-base-migration/EXTERNAL_AUDITOR_BRIEF.md`](./contracts/elysium-base-migration/EXTERNAL_AUDITOR_BRIEF.md)
 - **Stage 1 pre-audit report (Foundry + Slither + bytecode disassembly)**: [`contracts/elysium-base-migration/PRE_AUDIT_2026-11-23.md`](./contracts/elysium-base-migration/PRE_AUDIT_2026-11-23.md)
 
