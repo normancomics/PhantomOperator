@@ -102,11 +102,14 @@ Do not activate deposits, mint Base supply, or create a Base-USDC pool until all
 
 **Recorded migration-Safe threshold:** `2-of-3`. Any two of the listed signers must approve a migration mint; no signer can act alone.
 
+**Recorded eligibility:** every Elysium `$PHNTMOP` holder is eligible for the one-way `1:1` migration.
+
+**Recorded Base liquidity policy:** `$0` current budget; up to `$250 USDC` only after independent review, a successful owner-authorized migration rehearsal, and demonstrated product usage. Maximum acceptable loss is the full `$250`.
+
 **Still required before implementation:**
 
-1. Confirm whether every Elysium holder is eligible for the one-way migration and whether any migration window/expiry applies.
-2. Confirm the proposed Base liquidity policy: `$0` current budget; up to `$250 USDC` only after independent review, a successful owner-authorized migration rehearsal, and demonstrated product usage; maximum acceptable loss is the full `$250`.
-3. Approve a named independent auditor/review process.
+1. Choose a public migration window/expiry, or explicitly designate it open-ended with a future 2-of-3-Safe governance closure procedure.
+2. Approve a named independent auditor/review process.
 
 The signer addresses above are migration governance inputs only. They must not be substituted for the published Base-USDC x402 payment receiver or used to imply payment authorization.
 
