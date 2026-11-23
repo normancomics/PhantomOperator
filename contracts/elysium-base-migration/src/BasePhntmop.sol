@@ -6,7 +6,9 @@ pragma solidity 0.8.24;
 /// verify Elysium state itself; every mint must be publicly reconciled to a lockbox deposit.
 contract BasePhntmop {
     error ZeroAddress();
+    error ZeroAmount();
     error Unauthorized();
+    error MigrationIsClosed();
     error AlreadyProcessed(bytes32 depositId);
     error SupplyCapExceeded(uint256 requestedSupply, uint256 cap);
     error InsufficientBalance();
@@ -18,6 +20,7 @@ contract BasePhntmop {
     uint256 public constant MAX_SUPPLY = 1_000_000_000e18;
 
     address public immutable migrationSafe;
+    bool public migrationClosed;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
@@ -26,6 +29,7 @@ contract BasePhntmop {
     event Transfer(address indexed from, address indexed to, uint256 amount);
     event Approval(address indexed owner, address indexed spender, uint256 amount);
     event MigrationMinted(bytes32 indexed elysiumDepositId, address indexed recipient, uint256 amount);
+    event MigrationClosed(uint256 finalTotalSupply);
 
     constructor(address migrationSafe_) {
         if (migrationSafe_ == address(0)) revert ZeroAddress();
@@ -40,7 +44,9 @@ contract BasePhntmop {
     /// @notice Mint against one confirmed Elysium lockbox deposit.
     /// @dev The Safe's signers must verify the Elysium event and reconciliation data first.
     function mintForDeposit(bytes32 elysiumDepositId, address recipient, uint256 amount) external onlyMigrationSafe {
+        if (migrationClosed) revert MigrationIsClosed();
         if (recipient == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
         if (processedDeposit[elysiumDepositId]) revert AlreadyProcessed(elysiumDepositId);
         uint256 requestedSupply = totalSupply + amount;
         if (requestedSupply > MAX_SUPPLY) revert SupplyCapExceeded(requestedSupply, MAX_SUPPLY);
@@ -50,6 +56,14 @@ contract BasePhntmop {
         balanceOf[recipient] += amount;
         emit Transfer(address(0), recipient, amount);
         emit MigrationMinted(elysiumDepositId, recipient, amount);
+    }
+
+    /// @notice Permanently close migration minting after the migration window and final reconciliation.
+    /// @dev One-way action callable only by the 2-of-3 migration Safe; cannot be reopened.
+    function closeMigration() external onlyMigrationSafe {
+        if (migrationClosed) revert MigrationIsClosed();
+        migrationClosed = true;
+        emit MigrationClosed(totalSupply);
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
