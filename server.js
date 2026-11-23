@@ -37,6 +37,7 @@ const { Mppx, tempo, stripe } = require('mppx/express');
 const x402    = require('./lib/x402');
 const usage   = require('./lib/usage');
 const moneroBilling = require('./lib/monero-billing');
+const { ElysiumUsdcBilling, ELYSIUM_CHAIN_ID, ELYSIUM_NETWORK, ELYSIUM_USDC, ELYSIUM_USDC_DECIMALS } = require('./lib/elysium-billing');
 const { CreditLedger } = require('./lib/credits');
 const stripeCheckout = require('./lib/stripe-checkout');
 
@@ -98,6 +99,7 @@ const mcpTools = require('./mcp/tools.json');
 const app = express();
 app.set('trust proxy', 1);
 const creditLedger = new CreditLedger(process.env.CREDIT_LEDGER_DB || path.join(__dirname, 'data', 'credits.sqlite'));
+const elysiumBilling = new ElysiumUsdcBilling();
 
 // Stripe requires the exact raw body for webhook signature verification. This
 // route must remain before express.json(). It is disabled until explicitly configured.
@@ -730,6 +732,18 @@ app.get('/', publicLimiter, (req, res) => {
       token: 'USDC',
       payTo: x402.PAY_TO,
       facilitator: x402.FACILITATOR,
+      secondaryRails: [
+        {
+          paymentMethod: 'elysium-usdc',
+          network: ELYSIUM_NETWORK,
+          chainId: ELYSIUM_CHAIN_ID,
+          asset: ELYSIUM_USDC,
+          token: 'USDC',
+          decimals: ELYSIUM_USDC_DECIMALS,
+          payTo: x402.PAY_TO,
+          quoteEndpoint: `${b}/billing/elysium-usdc/quote`,
+        },
+      ],
     },
     skills: Object.values(ROUTES).map((r) => ({
       id: r.id,
@@ -1230,6 +1244,55 @@ app.post('/mcp', publicLimiter, (req, res) => {
   return res.json({ jsonrpc: '2.0', id, error: { code: -32601, message: `Method not found: ${method}` } });
 });
 
+// ─── Phase 1 Elysium USDC Payments (eip155:99901, quote + on-chain receipt) ──
+app.get('/billing/elysium-usdc/info', publicLimiter, (req, res) => {
+  const b = baseUrl(req);
+  return res.json({
+    paymentMethod: 'elysium-usdc',
+    phase: 1,
+    primaryRail: 'x402-base-usdc',
+    network: ELYSIUM_NETWORK,
+    chainId: ELYSIUM_CHAIN_ID,
+    asset: ELYSIUM_USDC,
+    symbol: 'USDC',
+    decimals: ELYSIUM_USDC_DECIMALS,
+    payTo: x402.PAY_TO,
+    quoteEndpoint: `${b}/billing/elysium-usdc/quote`,
+    quoteStatusEndpoint: `${b}/billing/elysium-usdc/quote/:quoteId`,
+  });
+});
+
+app.post('/billing/elysium-usdc/quote', paidLimiter, (req, res) => {
+  const skillId = req.body && req.body.skillId;
+  const route = ROUTES[skillId];
+  if (!route) return res.status(400).json({ error: 'skillId must name an active skill.' });
+  const input = (req.body && req.body.input) || {};
+  const payer = req.body && req.body.payer;
+  try {
+    const quote = elysiumBilling.createQuote({
+      route,
+      body: input,
+      payer,
+      baseUrl: baseUrl(req),
+    });
+    usage.record(req, {
+      route: route.id,
+      rail: 'elysium-usdc',
+      outcome: 'payment_quote',
+      amountUsd: route.priceUsd,
+    });
+    return res.status(201).json(quote);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/billing/elysium-usdc/quote/:id', publicLimiter, (req, res) => {
+  const status = elysiumBilling.getQuoteStatus(req.params.id);
+  if (!status) return res.status(404).json({ error: 'Elysium payment quote not found.' });
+  return res.json(status);
+});
+
 // ─── Optional Monero Invoice Payments (view-only wallet RPC) ─────────────────
 // A quote allocates a unique subaddress. It is disabled until MONERO_WALLET_RPC_URL,
 // MONERO_PROOF_SECRET, and MONERO_USD_PER_XMR are configured locally.
@@ -1269,7 +1332,56 @@ for (const route of Object.values(ROUTES)) {
   const validator = validateSkillInput(route.id);
   app.post(route.path, paidLimiter, async (req, res) => {
     const b = baseUrl(req);
-    const useMonero = String(req.headers['x-payment-method'] || '').toLowerCase() === 'monero';
+    const paymentMethod = String(req.headers['x-payment-method'] || '').toLowerCase();
+    const useMonero = paymentMethod === 'monero';
+    const useElysiumUsdc = paymentMethod === 'elysium-usdc';
+
+    if (useElysiumUsdc) {
+      validator(req, res, () => {});
+      if (res.headersSent) return;
+      const v = await elysiumBilling.verifyForRequest(req.headers['x-payment'], route, req.body || {});
+      if (!v.ok) {
+        if (v.status === 402) {
+          usage.record(req, { route: route.id, rail: 'elysium-usdc', outcome: 'payment_quote', amountUsd: route.priceUsd });
+        }
+        return res.status(v.status).json({ error: v.message, paymentMethod: 'elysium-usdc', quoteEndpoint: `${b}/billing/elysium-usdc/quote` });
+      }
+      let result;
+      try {
+        result = await route.run(req.body || {});
+      } catch (err) {
+        elysiumBilling.unclaim(v.settlement.quoteId, v.settlement.transferKey);
+        return res.status(500).json({ error: `${route.id} failed`, detail: err.message });
+      }
+      usage.record(req, {
+        route: route.id,
+        rail: 'elysium-usdc',
+        outcome: 'settled',
+        amountUsd: route.priceUsd,
+        transaction: v.settlement.txHash,
+      });
+      const receiptHeader = Buffer.from(JSON.stringify({
+        success: true,
+        paymentProtocol: 'elysium-usdc',
+        network: v.settlement.network,
+        chainId: v.settlement.chainId,
+        asset: v.settlement.asset,
+        transaction: v.settlement.txHash,
+        quoteId: v.settlement.quoteId,
+        payer: v.settlement.payer,
+        payTo: v.settlement.payTo,
+        amountAtomic: v.settlement.amountAtomic,
+      })).toString('base64');
+      return res
+        .set({ 'PAYMENT-RESPONSE': receiptHeader, 'X-PAYMENT-RESPONSE': receiptHeader })
+        .json({
+          skill: route.id,
+          paymentProtocol: 'elysium-usdc',
+          elysiumSettlement: v.settlement,
+          ...result,
+        });
+    }
+
     const v = useMonero
       ? await moneroBilling.verifyForRequest(req.headers['x-payment'], route, req.body || {})
       : await x402.verify(req, route, b);
@@ -1311,6 +1423,77 @@ for (const route of Object.values(ROUTES)) {
 // Credits are debited atomically before execution and refunded if the service
 // cannot produce a result. This rail is enabled only after signed Stripe
 // Checkout fulfillment is configured.
+const WEBSITE_PRIVACY_BASELINE_CENTS = 1900;
+
+app.post('/credits/offers/website-privacy-baseline', paidLimiter, validateSkillInput('metadata-audit'), async (req, res) => {
+  if (!stripeCheckout.configured()) {
+    return res.status(503).json({ error: 'Stripe prepaid credits are not enabled yet.' });
+  }
+  const authorized = Boolean(req.body && req.body.authorized === true);
+  if (!authorized) {
+    return res.status(400).json({
+      error: 'Authorization required',
+      message: 'Pass "authorized": true to confirm you own or are authorized to assess the target website.',
+    });
+  }
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  let debited = false;
+  try {
+    debited = creditLedger.debit(token, WEBSITE_PRIVACY_BASELINE_CENTS, 'website-privacy-baseline');
+    if (!debited) {
+      return res.status(402).json({
+        error: 'Insufficient prepaid credit balance.',
+        requiredCents: WEBSITE_PRIVACY_BASELINE_CENTS,
+        requiredUsd: '19.00',
+      });
+    }
+    const audit = await MetadataAgent.audit(req.body.url.trim());
+    const prioritizedChecklist = (audit.findings || []).map((f, idx) => ({
+      priority: idx + 1,
+      riskLevel: f.riskLevel,
+      category: f.category,
+      finding: f.label,
+      evidenceField: f.field || null,
+      action: f.recommendation,
+    }));
+    usage.record(req, {
+      route: 'website-privacy-baseline',
+      rail: 'stripe-prepaid-credit',
+      outcome: 'settled',
+      amountUsd: WEBSITE_PRIVACY_BASELINE_CENTS / 100,
+    });
+    return res.json({
+      offer: 'website-privacy-baseline',
+      priceUsd: 19.00,
+      paymentProtocol: 'stripe-prepaid-credit',
+      targetUrl: audit.url,
+      statusCode: audit.statusCode,
+      assessedAt: audit.timestamp,
+      overallRisk: audit.overallRisk,
+      findingCounts: audit.findingCounts,
+      prioritizedRemediationChecklist: prioritizedChecklist,
+      observations: {
+        findings: audit.findings,
+        recommendations: audit.recommendations,
+      },
+      scopeAndLimitations: [
+        'Fixed-scope public-exposure and privacy-baseline review of a single public HTTP/HTTPS origin.',
+        'Not a penetration test, compliance certification, malware scan, or authenticated application assessment.',
+        'Observations reflect public responses at execution time; findings are signals for review, not proof of compromise.',
+      ],
+    });
+  } catch (error) {
+    if (debited) {
+      try {
+        creditLedger.refund(token, WEBSITE_PRIVACY_BASELINE_CENTS, 'website-privacy-baseline');
+      } catch {
+        /* preserve original failure */
+      }
+    }
+    return res.status(500).json({ error: 'website-privacy-baseline failed', detail: error.message });
+  }
+});
+
 if (stripeCheckout.configured()) {
   for (const route of Object.values(ROUTES)) {
     const validator = validateSkillInput(route.id);

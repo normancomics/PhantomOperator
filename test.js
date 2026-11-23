@@ -58,6 +58,141 @@ async function runServerTests() {
     assert.ok(llms.includes('USDC on Base') && !llms.includes('USDCx on Base') && !llms.includes('MPP equivalents are available'));
     assert.ok(JSON.parse(unpaid.body).accepts[0].outputSchema);
     assert.strictEqual((await request(34567, 'OPTIONS', '/skills/opsec-score')).status, 204);
+
+    // Phase 1 Elysium USDC billing endpoint tests
+    const elyInfoRes = await request(34567, 'GET', '/billing/elysium-usdc/info');
+    assert.strictEqual(elyInfoRes.status, 200);
+    const elyInfo = JSON.parse(elyInfoRes.body);
+    assert.strictEqual(elyInfo.chainId, 99901);
+    assert.strictEqual(elyInfo.network, 'eip155:99901');
+    assert.strictEqual(elyInfo.asset, '0xb47c4C8F73F009CC0C0d3f92B388d13E293F0B65');
+    assert.strictEqual(elyInfo.payTo, RECEIVER);
+    assert.strictEqual(elyInfo.decimals, 6);
+
+    const { ethers } = require('ethers');
+    const os = require('os');
+    const path = require('path');
+    const fs = require('fs');
+    const {
+      ElysiumUsdcBilling,
+      ELYSIUM_USDC,
+      buildSigningMessage,
+      requestHash,
+    } = require('./lib/elysium-billing');
+
+    const testWallet = ethers.Wallet.createRandom();
+    const quoteRes = await request(
+      34567,
+      'POST',
+      '/billing/elysium-usdc/quote',
+      JSON.stringify({
+        skillId: 'opsec-score',
+        input: { handle: 'satoshi' },
+        payer: testWallet.address,
+      })
+    );
+    assert.strictEqual(quoteRes.status, 201);
+    const quoteObj = JSON.parse(quoteRes.body);
+    assert.strictEqual(quoteObj.payer, testWallet.address);
+    assert.strictEqual(quoteObj.payTo, RECEIVER);
+    assert.strictEqual(quoteObj.amountAtomic, '250000');
+
+    const statusRes = await request(34567, 'GET', `/billing/elysium-usdc/quote/${quoteObj.quoteId}`);
+    assert.strictEqual(statusRes.status, 200);
+    assert.strictEqual(JSON.parse(statusRes.body).status, 'pending');
+
+    // Unit test ElysiumUsdcBilling receipt verification + replay protection
+    const tmpDb = path.join(os.tmpdir(), `elysium-billing-test-${process.pid}-${Date.now()}.sqlite`);
+    const transferIface = new ethers.Interface([
+      'event Transfer(address indexed from, address indexed to, uint256 value)',
+    ]);
+    const fakeTxHash = '0x' + 'ab'.repeat(32);
+    const encodedLog = transferIface.encodeEventLog('Transfer', [
+      testWallet.address,
+      RECEIVER,
+      50000n,
+    ]);
+    const mockProvider = {
+      getTransactionReceipt: async (hash) => {
+        if (hash !== fakeTxHash) return null;
+        return {
+          status: 1,
+          blockNumber: 123450,
+          logs: [
+            {
+              address: ELYSIUM_USDC,
+              topics: encodedLog.topics,
+              data: encodedLog.data,
+              index: 0,
+            },
+          ],
+        };
+      },
+      getBlock: async () => ({ timestamp: Math.floor(Date.now() / 1000) }),
+      getBlockNumber: async () => 123452,
+    };
+
+    const billing = new ElysiumUsdcBilling({ filename: tmpDb, provider: mockProvider });
+    const mockRoute = { id: 'opsec-score', path: '/skills/opsec-score', priceUsd: 0.05 };
+    const bodyInput = { handle: 'satoshi' };
+    const localQuote = billing.createQuote({
+      route: mockRoute,
+      body: bodyInput,
+      payer: testWallet.address,
+      baseUrl: 'http://127.0.0.1:34567',
+    });
+
+    const msg = buildSigningMessage({
+      quoteId: localQuote.quoteId,
+      txHash: fakeTxHash,
+      routeId: mockRoute.id,
+      reqHash: requestHash(bodyInput),
+    });
+    const sig = await testWallet.signMessage(msg);
+    const headerPayload = Buffer.from(
+      JSON.stringify({ quoteId: localQuote.quoteId, txHash: fakeTxHash, signature: sig })
+    ).toString('base64');
+
+    // 1. Tampered request body must be rejected (402)
+    const tampered = await billing.verifyForRequest(headerPayload, mockRoute, { handle: 'mallory' });
+    assert.strictEqual(tampered.ok, false);
+    assert.strictEqual(tampered.status, 402);
+
+    // 2. Valid proof succeeds
+    const verified = await billing.verifyForRequest(headerPayload, mockRoute, bodyInput);
+    assert.strictEqual(verified.ok, true);
+    assert.strictEqual(verified.settlement.txHash, fakeTxHash);
+    assert.strictEqual(verified.settlement.amountAtomic, '50000');
+
+    // 3. Replaying the same quote fails with 409
+    const replayQuote = await billing.verifyForRequest(headerPayload, mockRoute, bodyInput);
+    assert.strictEqual(replayQuote.ok, false);
+    assert.strictEqual(replayQuote.status, 409);
+
+    // 4. Replaying the same on-chain txHash on a brand-new quote also fails with 409
+    const secondQuote = billing.createQuote({
+      route: mockRoute,
+      body: bodyInput,
+      payer: testWallet.address,
+      baseUrl: 'http://127.0.0.1:34567',
+    });
+    const secondMsg = buildSigningMessage({
+      quoteId: secondQuote.quoteId,
+      txHash: fakeTxHash,
+      routeId: mockRoute.id,
+      reqHash: requestHash(bodyInput),
+    });
+    const secondSig = await testWallet.signMessage(secondMsg);
+    const secondHeader = Buffer.from(
+      JSON.stringify({ quoteId: secondQuote.quoteId, txHash: fakeTxHash, signature: secondSig })
+    ).toString('base64');
+    const replayTx = await billing.verifyForRequest(secondHeader, mockRoute, bodyInput);
+    assert.strictEqual(replayTx.ok, false);
+    assert.strictEqual(replayTx.status, 409);
+
+    for (const suffix of ['', '-wal', '-shm']) {
+      try { fs.unlinkSync(tmpDb + suffix); } catch { /* ignore */ }
+    }
   });
 
 
