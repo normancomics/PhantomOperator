@@ -167,6 +167,123 @@ app.get('/billing/credits/balance', paidLimiter, (req, res) => {
   return res.json({ balanceCents: balance.balanceCents, balanceUsd: (balance.balanceCents / 100).toFixed(2), issuedAt: balance.issuedAt, updatedAt: balance.updatedAt });
 });
 
+// ─── One-Time Owner Browser Setup for Stripe Prepaid Credits ─────────────────
+const STRIPE_SETUP_TOKEN_FILE = path.join(__dirname, 'data', '.stripe-setup-token');
+
+function verifyStripeSetupToken(candidate) {
+  if (!candidate || typeof candidate !== 'string' || candidate.length < 32) return false;
+  try {
+    if (!fs.existsSync(STRIPE_SETUP_TOKEN_FILE)) return false;
+    const raw = JSON.parse(fs.readFileSync(STRIPE_SETUP_TOKEN_FILE, 'utf8'));
+    if (!raw || !raw.token || !raw.expiresAt || Date.now() > Number(raw.expiresAt)) return false;
+    const a = Buffer.from(String(raw.token), 'utf8');
+    const b = Buffer.from(candidate.trim(), 'utf8');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+app.get('/admin/stripe-setup', paidLimiter, (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+  const token = String(req.query.token || '');
+  if (!verifyStripeSetupToken(token)) {
+    return res.status(403).type('text/plain').send('Setup link expired or invalid.');
+  }
+  return res.type('html').send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PhantomOperator — One-Time Stripe Setup</title>
+  <style>
+    body { background:#07090e; color:#e2e8f0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; max-width:640px; margin:40px auto; padding:0 20px; line-height:1.5; }
+    .card { background:#0e131f; border:1px solid #1e293b; border-radius:12px; padding:24px; }
+    h1 { color:#00f5d4; font-size:1.25rem; margin-top:0; }
+    label { display:block; font-weight:600; margin:14px 0 6px; font-size:0.86rem; }
+    input[type="password"], input[type="text"] { width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#05080f; color:#e2e8f0; font-family:inherit; box-sizing:border-box; }
+    button { margin-top:18px; width:100%; padding:12px; border:none; border-radius:8px; background:linear-gradient(135deg,#00f5d4,#00bbf9); color:#041019; font-weight:700; font-family:inherit; cursor:pointer; font-size:0.92rem; }
+    .sub { color:#94a3b8; font-size:0.8rem; }
+    pre { background:#05080f; border:1px solid #1e293b; border-radius:8px; padding:12px; overflow-x:auto; font-size:0.8rem; color:#a7f3d0; display:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>PhantomOperator — One-Time Stripe Credits & Webhook Setup</h1>
+    <p class="sub">Your key is transmitted directly over HTTPS to your server, validated against Stripe, used to auto-create the webhook endpoint (<code>https://freysaai.freysa.dev/billing/stripe/webhook</code>), and stored in <code>/home/nixos/PhantomOperator/.env</code> (<code>chmod 600</code>). This link burns itself after one successful setup.</p>
+    <form id="setupForm">
+      <label for="secretKey">1. Stripe Secret Key (<code>sk_test_...</code> or <code>sk_live_...</code>)</label>
+      <input id="secretKey" type="password" autocomplete="off" placeholder="sk_test_... or sk_live_..." required />
+      <label for="webhookSecret">2. Existing Webhook Signing Secret (optional — leave blank to auto-create via Stripe API)</label>
+      <input id="webhookSecret" type="password" autocomplete="off" placeholder="Leave blank to auto-create via POST /v1/webhook_endpoints" />
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <input id="enableCredits" type="checkbox" checked />
+        <span>Enable Stripe Prepaid Credits & $19 Website Privacy Baseline immediately</span>
+      </label>
+      <button type="submit" id="submitBtn">Validate Key & Auto-Create Webhook</button>
+    </form>
+    <pre id="resultBox"></pre>
+  </div>
+  <script>
+    const setupToken = ${JSON.stringify(token)};
+    document.getElementById('setupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const out = document.getElementById('resultBox');
+      btn.disabled = true;
+      btn.textContent = 'Validating with Stripe & configuring webhook...';
+      out.style.display = 'block';
+      out.textContent = 'Working...';
+      try {
+        const res = await fetch('/admin/stripe-setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: setupToken,
+            secretKey: document.getElementById('secretKey').value,
+            webhookSecret: document.getElementById('webhookSecret').value,
+            enableCredits: document.getElementById('enableCredits').checked
+          })
+        });
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+        btn.textContent = res.ok ? 'Setup Complete (Link Burned)' : 'Retry Setup';
+        if (!res.ok) btn.disabled = false;
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+        btn.disabled = false;
+        btn.textContent = 'Retry Setup';
+      }
+    });
+  </script>
+</body>
+</html>`);
+});
+
+app.post('/admin/stripe-setup', paidLimiter, async (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+  const token = req.body && req.body.token;
+  if (!verifyStripeSetupToken(token)) {
+    return res.status(403).json({ error: 'Setup token expired or invalid.' });
+  }
+  try {
+    const result = await stripeCheckout.provisionStripeCredits({
+      secretKey: req.body && req.body.secretKey,
+      webhookSecret: req.body && req.body.webhookSecret,
+      enableCredits: req.body ? Boolean(req.body.enableCredits) : true,
+      webhookUrl: `${baseUrl(req)}/billing/stripe/webhook`,
+    });
+    try { fs.unlinkSync(STRIPE_SETUP_TOKEN_FILE); } catch { /* ignore */ }
+    return res.status(200).json({
+      ok: true,
+      message: 'Stripe prepaid credits & webhook configured and live. One-time setup token burned.',
+      ...result,
+    });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 // ─── Complete Route & Skill Registry (x402 v2 + Bazaar Metadata) ─────────────
 
 const ROUTES = {
@@ -1494,25 +1611,26 @@ app.post('/credits/offers/website-privacy-baseline', paidLimiter, validateSkillI
   }
 });
 
-if (stripeCheckout.configured()) {
-  for (const route of Object.values(ROUTES)) {
-    const validator = validateSkillInput(route.id);
-    app.post(`/credits${route.path}`, paidLimiter, validator, async (req, res) => {
-      const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-      const amountCents = Math.round(route.priceUsd * 100);
-      let debited = false;
-      try {
-        debited = creditLedger.debit(token, amountCents, route.id);
-        if (!debited) return res.status(402).json({ error: 'Insufficient prepaid credit balance.' });
-        const result = await route.run(req.body || {});
-        usage.record(req, { route: route.id, rail: 'stripe-prepaid-credit', outcome: 'settled', amountUsd: route.priceUsd });
-        return res.json({ skill: route.id, paymentProtocol: 'stripe-prepaid-credit', ...result });
-      } catch (error) {
-        if (debited) { try { creditLedger.refund(token, amountCents, route.id); } catch { /* preserve original failure */ } }
-        return res.status(500).json({ error: `${route.id} failed`, detail: error.message });
-      }
-    });
-  }
+for (const route of Object.values(ROUTES)) {
+  const validator = validateSkillInput(route.id);
+  app.post(`/credits${route.path}`, paidLimiter, validator, async (req, res) => {
+    if (!stripeCheckout.configured()) {
+      return res.status(503).json({ error: 'Stripe prepaid credits are not enabled yet.' });
+    }
+    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const amountCents = Math.round(route.priceUsd * 100);
+    let debited = false;
+    try {
+      debited = creditLedger.debit(token, amountCents, route.id);
+      if (!debited) return res.status(402).json({ error: 'Insufficient prepaid credit balance.' });
+      const result = await route.run(req.body || {});
+      usage.record(req, { route: route.id, rail: 'stripe-prepaid-credit', outcome: 'settled', amountUsd: route.priceUsd });
+      return res.json({ skill: route.id, paymentProtocol: 'stripe-prepaid-credit', ...result });
+    } catch (error) {
+      if (debited) { try { creditLedger.refund(token, amountCents, route.id); } catch { /* preserve original failure */ } }
+      return res.status(500).json({ error: `${route.id} failed`, detail: error.message });
+    }
+  });
 }
 
 // ─── MPP Paid Skill Endpoints (Tempo OUSD) ───────────────────────────────────
