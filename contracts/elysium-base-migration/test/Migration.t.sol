@@ -58,6 +58,7 @@ contract MigrationTest {
 
         require(depositId != bytes32(0), "missing deposit id");
         require(source.balanceOf(address(lockbox)) == amount, "lockbox balance mismatch");
+        require(lockbox.totalLocked() == amount, "lockbox accounting mismatch");
         require(source.balanceOf(ALICE) == 1_000_000e18 - amount, "sender balance mismatch");
     }
 
@@ -92,5 +93,6 @@ contract MigrationTest {
         vm.prank(ALICE);
         lockbox.deposit(amount, BOB);
         require(source.balanceOf(address(lockbox)) == amount, "locked amount mismatch");
+        require(lockbox.totalLocked() == amount, "accounted amount mismatch");
     }
 }

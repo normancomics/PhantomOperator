@@ -12,7 +12,8 @@ contract MigrationLockbox {
     error ZeroAddress();
     error ZeroAmount();
     error TokenTransferFailed();
-    error UnexpectedReceivedAmount(uint256 expected, uint256 received);
+    error InsufficientLockedBalance(uint256 expected, uint256 actual);
+    error Reentrancy();
 
     event DepositLocked(
         bytes32 indexed depositId,
@@ -24,33 +25,38 @@ contract MigrationLockbox {
 
     IERC20Lockbox public immutable token;
     uint256 public nextNonce;
+    uint256 public totalLocked;
+    uint256 private entered;
 
     constructor(address token_) {
         if (token_ == address(0)) revert ZeroAddress();
         token = IERC20Lockbox(token_);
     }
 
+    modifier nonReentrant() {
+        if (entered != 0) revert Reentrancy();
+        entered = 1;
+        _;
+        entered = 0;
+    }
+
     /// @notice Lock exact Elysium PHNTMOP and bind the deposit to a Base recipient.
     /// @return depositId Unique evidence identifier for off-chain Safe verification.
-    function deposit(uint256 amount, address baseRecipient) external returns (bytes32 depositId) {
+    function deposit(uint256 amount, address baseRecipient) external nonReentrant returns (bytes32 depositId) {
         if (amount == 0) revert ZeroAmount();
         if (baseRecipient == address(0)) revert ZeroAddress();
 
-        uint256 balanceBefore = token.balanceOf(address(this));
-        _safeTransferFrom(msg.sender, address(this), amount);
-        uint256 received = token.balanceOf(address(this)) - balanceBefore;
-        if (received != amount) revert UnexpectedReceivedAmount(amount, received);
+        // Commit accounting before the external token call; any failed transfer reverts it.
+        uint256 nonce = nextNonce;
+        nextNonce = nonce + 1;
+        uint256 lockedAfter = totalLocked + amount;
+        totalLocked = lockedAfter;
 
-        uint256 nonce = nextNonce++;
+        if (!token.transferFrom(msg.sender, address(this), amount)) revert TokenTransferFailed();
+        uint256 actualLocked = token.balanceOf(address(this));
+        if (actualLocked < lockedAfter) revert InsufficientLockedBalance(lockedAfter, actualLocked);
+
         depositId = keccak256(abi.encode(block.chainid, address(this), nonce, msg.sender, baseRecipient, amount));
         emit DepositLocked(depositId, nonce, msg.sender, baseRecipient, amount);
-    }
-
-    function _safeTransferFrom(address from, address to, uint256 amount) private {
-        (bool success, bytes memory returndata) =
-            address(token).call(abi.encodeWithSelector(IERC20Lockbox.transferFrom.selector, from, to, amount));
-        if (!success || (returndata.length != 0 && !abi.decode(returndata, (bool)))) {
-            revert TokenTransferFailed();
-        }
     }
 }
