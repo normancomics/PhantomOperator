@@ -160,6 +160,51 @@ app.post('/billing/stripe/checkout', paidLimiter, async (req, res) => {
   }
 });
 
+// Direct one-step $19 Website Privacy Baseline Stripe Checkout for humans.
+// Validates the target public URL + authorization upfront, issues a $19.00
+// (1900 cents) pending credit token fulfilled by the signed Stripe webhook,
+// and redirects back to /?baseline=success to run the report automatically.
+app.post('/billing/stripe/website-privacy-baseline-checkout', paidLimiter, validateSkillInput('metadata-audit'), async (req, res) => {
+  if (!stripeCheckout.configured()) {
+    return res.status(503).json({ error: 'Stripe prepaid credits are not enabled yet.' });
+  }
+  const authorized = Boolean(req.body && req.body.authorized === true);
+  if (!authorized) {
+    return res.status(400).json({
+      error: 'Authorization required',
+      message: 'Confirm you own or are authorized to assess the target website.',
+    });
+  }
+  const targetUrl = req.body.url.trim();
+  const amountCents = 1900;
+  try {
+    const purchaseId = crypto.randomBytes(24).toString('base64url');
+    const creditToken = creditLedger.createToken();
+    creditLedger.createPendingStripePurchase(purchaseId, creditToken, amountCents);
+    const checkout = await stripeCheckout.createCheckout({
+      purchaseId,
+      amountCents,
+      publicBaseUrl: baseUrl(req),
+      productName: 'PhantomOperator — Website Privacy Baseline ($19)',
+      productDescription: `Fixed-scope public-exposure & privacy-baseline review for ${targetUrl}`,
+      successPath: '/?baseline=success',
+      cancelPath: '/?baseline=cancelled',
+    });
+    creditLedger.attachStripeSession(purchaseId, checkout.id);
+    return res.status(201).json({
+      offer: 'website-privacy-baseline',
+      checkoutUrl: checkout.url,
+      creditToken,
+      targetUrl,
+      amountCents,
+      priceUsd: '19.00',
+      note: 'After Stripe confirms payment, your Website Privacy Baseline report runs automatically on return.',
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 app.get('/billing/credits/balance', paidLimiter, (req, res) => {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const balance = creditLedger.balance(token);
@@ -658,7 +703,34 @@ function renderLandingHtml(base) {
         <button class="btn" onclick="runQuickPreview()">Run free preview</button>
         <a class="btn-sm" style="background:#1e293b;color:#e2e8f0;padding:10px 16px;" href="/sample-report">View sample report</a>
       </div>
-      <p class="sub" style="margin-bottom:0;">Free preview: up to 5 per client per hour. A full metadata audit costs $0.05 USDC on Base after you review the payment terms.</p>
+      <p class="sub" style="margin-bottom:0;">Free preview: up to 5 per client per hour. Need a complete prioritized remediation checklist by card? Use the <strong>$19 Website Privacy Baseline</strong> below (or $0.05 USDC on Base via x402 for automated agents).</p>
+    </div>
+
+    <div class="card" id="baselineOfferCard" style="margin-bottom:20px; border-color:rgba(255,102,0,0.55);">
+      <h2>
+        <span>Website Privacy Baseline — Fixed-Scope Human Audit</span>
+        <span class="badge">$19.00 Card / Link</span>
+      </h2>
+      <p style="margin-top:0; color:var(--muted);">
+        One-time card checkout via Stripe (no crypto wallet required). Inspects a single public website you own or are authorized to assess for exposed server/framework headers, author/generator metadata, HTML comments, and third-party trackers, and produces a <strong>prioritized remediation checklist</strong> ready for engineering handoff.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <input id="baselineUrl" inputmode="url" autocomplete="url" placeholder="https://your-site.example" aria-label="Authorized website URL for $19 Website Privacy Baseline" style="flex:1;min-width:240px;margin:0;" />
+        <button class="btn btn-xmr" id="baselineCheckoutBtn" onclick="startBaselineStripeCheckout()">Buy $19 Website Privacy Baseline (Card)</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="baselineAuthorized" style="width:auto;margin:0;" />
+        <span>I confirm I own or am authorized to assess this public website. (Fixed-scope public-response baseline; not a penetration test.)</span>
+      </label>
+      <details style="font-size:0.8rem;color:var(--muted);margin-top:6px;">
+        <summary style="cursor:pointer;color:var(--cyan);">Already have a prepaid credit token (<code>po_credit_...</code>)? Redeem without re-paying</summary>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <input id="existingCreditToken" type="password" autocomplete="off" placeholder="po_credit_..." style="flex:1;min-width:220px;margin:0;" />
+          <button class="btn-sm" onclick="runBaselineWithExistingToken()">Run $19 Baseline with Token</button>
+        </div>
+      </details>
+      <div id="baselineStatusBox" class="addr-box" hidden aria-live="polite"></div>
+      <div id="baselineReportBox" class="preview-result" hidden aria-live="polite"></div>
     </div>
 
     <div class="card" style="margin-bottom:20px;">
@@ -685,8 +757,11 @@ function renderLandingHtml(base) {
         </div>
         <div id="previewHumanResult" class="preview-result" hidden aria-live="polite"></div>
         <div id="previewUpgrade" class="addr-box" hidden>
-          <strong style="color:var(--cyan)">Free preview complete.</strong> The $0.05 full audit adds the complete findings, detailed headers and trackers, and remediation guidance for this URL.<br/>
-          <button class="btn-sm" style="margin-top:9px" onclick="upgradePreviewToFullAudit()">View full-audit payment terms — $0.05 USDC on Base</button>
+          <strong style="color:var(--cyan)">Free preview complete.</strong> Upgrade to unlock every finding, full header/tracker inventory, and prioritized remediation steps for this URL:<br/>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;">
+            <button class="btn-sm btn-xmr" onclick="prefillBaselineFromPreview()">Get $19 Website Privacy Baseline (Card)</button>
+            <button class="btn-sm" onclick="upgradePreviewToFullAudit()">Agent / API: $0.05 USDC on Base (x402)</button>
+          </div>
         </div>
         <p class="sub">Only submit information you are authorized to assess. Do not submit passwords, seed phrases, private keys, or another person's personal data without permission. <a href="/privacy">Privacy model</a> and <a href="/terms">terms</a>.</p>
         <pre id="consoleOut">// Select a check, inspect its exact terms, or view a free sample report.</pre>
@@ -804,6 +879,181 @@ function renderLandingHtml(base) {
       selectSkill('metadata-audit', { url: payload.url }, 0.05);
       invokeSkill();
     }
+
+    function prefillBaselineFromPreview() {
+      let url = document.getElementById('quickUrl').value.trim();
+      if (!url) {
+        try { url = JSON.parse(document.getElementById('payloadBox').value).url || ''; } catch {}
+      }
+      if (url) document.getElementById('baselineUrl').value = url;
+      document.getElementById('baselineOfferCard').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('baselineUrl').focus();
+    }
+
+    function setBaselineStatus(msg, isError) {
+      const box = document.getElementById('baselineStatusBox');
+      box.hidden = false;
+      box.style.borderColor = isError ? 'rgba(255,102,0,0.6)' : 'rgba(0,245,212,0.4)';
+      box.textContent = msg;
+    }
+
+    function renderBaselineReport(report, backupToken) {
+      const box = document.getElementById('baselineReportBox');
+      box.replaceChildren();
+      const h = document.createElement('h3');
+      h.textContent = 'Website Privacy Baseline Report — ' + report.targetUrl;
+      const meta = document.createElement('p');
+      meta.className = 'sub';
+      meta.textContent = 'Overall exposure risk: ' + String(report.overallRisk || 'unknown').toUpperCase() +
+        ' | HTTP ' + report.statusCode + ' | Assessed at ' + report.assessedAt;
+      box.append(h, meta);
+
+      const list = report.prioritizedRemediationChecklist || [];
+      if (list.length === 0) {
+        const clean = document.createElement('p');
+        clean.textContent = 'No public metadata, comment, header, or tracker exposure signals were flagged on this URL.';
+        box.append(clean);
+      } else {
+        for (const item of list) {
+          const row = document.createElement('div');
+          row.className = 'finding';
+          const badge = document.createElement('span');
+          badge.className = 'risk';
+          badge.textContent = '#' + item.priority + ' ' + String(item.riskLevel || 'review').toUpperCase();
+          const title = document.createElement('strong');
+          title.textContent = item.finding + ' ';
+          const action = document.createElement('div');
+          action.className = 'sub';
+          action.textContent = 'Fix: ' + (item.action || 'Review and minimize public exposure.');
+          row.append(badge, title, action);
+          box.append(row);
+        }
+      }
+
+      const dlBtn = document.createElement('button');
+      dlBtn.className = 'btn-sm';
+      dlBtn.style.marginTop = '10px';
+      dlBtn.textContent = 'Download Full Report JSON';
+      dlBtn.onclick = () => {
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'phantomoperator-website-privacy-baseline.json';
+        a.click();
+      };
+      box.append(dlBtn);
+      box.hidden = false;
+      if (backupToken) {
+        setBaselineStatus('Baseline report complete. Paid credit receipt redeemed.', false);
+      }
+    }
+
+    async function executeBaselineWithToken(token, targetUrl) {
+      setBaselineStatus('Running your $19 Website Privacy Baseline assessment for ' + targetUrl + ' ...', false);
+      const res = await fetch('/credits/offers/website-privacy-baseline', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ url: targetUrl, authorized: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || ('Baseline execution failed (HTTP ' + res.status + ')'));
+      }
+      try { localStorage.removeItem('po_pending_baseline'); } catch {}
+      renderBaselineReport(data, token);
+    }
+
+    async function startBaselineStripeCheckout() {
+      const url = document.getElementById('baselineUrl').value.trim() || document.getElementById('quickUrl').value.trim();
+      const authorized = document.getElementById('baselineAuthorized').checked;
+      if (!url) {
+        setBaselineStatus('Enter the public website URL (e.g. https://your-site.example) first.', true);
+        return;
+      }
+      if (!authorized) {
+        setBaselineStatus('Check the authorization box confirming you own or are authorized to assess this website.', true);
+        return;
+      }
+      const btn = document.getElementById('baselineCheckoutBtn');
+      btn.disabled = true;
+      setBaselineStatus('Creating secure $19.00 Stripe Checkout session...', false);
+      try {
+        const res = await fetch('/billing/stripe/website-privacy-baseline-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, authorized: true })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.checkoutUrl) {
+          throw new Error(data.message || data.error || 'Could not start Stripe Checkout.');
+        }
+        try {
+          localStorage.setItem('po_pending_baseline', JSON.stringify({
+            creditToken: data.creditToken,
+            targetUrl: data.targetUrl,
+            createdAt: Date.now()
+          }));
+          localStorage.setItem('po_credit_token', data.creditToken);
+        } catch {}
+        window.location.assign(data.checkoutUrl);
+      } catch (e) {
+        btn.disabled = false;
+        setBaselineStatus('Error: ' + e.message, true);
+      }
+    }
+
+    async function runBaselineWithExistingToken() {
+      const token = document.getElementById('existingCreditToken').value.trim();
+      const url = document.getElementById('baselineUrl').value.trim() || document.getElementById('quickUrl').value.trim();
+      const authorized = document.getElementById('baselineAuthorized').checked;
+      if (!token) { setBaselineStatus('Paste your po_credit_... token first.', true); return; }
+      if (!url) { setBaselineStatus('Enter the target public website URL first.', true); return; }
+      if (!authorized) { setBaselineStatus('Check the authorization box confirming you own or are authorized to assess this website.', true); return; }
+      try {
+        await executeBaselineWithToken(token, url);
+      } catch (e) {
+        setBaselineStatus('Error: ' + e.message, true);
+      }
+    }
+
+    (async function checkReturningStripeBaseline() {
+      const params = new URLSearchParams(window.location.search);
+      const baselineState = params.get('baseline');
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem('po_pending_baseline') || 'null'); } catch {}
+      if ( pending && pending.targetUrl ) {
+        document.getElementById('baselineUrl').value = pending.targetUrl;
+        document.getElementById('baselineAuthorized').checked = true;
+        if (pending.creditToken) document.getElementById('existingCreditToken').value = pending.creditToken;
+      }
+      if (baselineState === 'cancelled') {
+        setBaselineStatus('Stripe Checkout was cancelled. No charge was made.', true);
+        return;
+      }
+      if (baselineState === 'success' && pending && pending.creditToken && pending.targetUrl) {
+        document.getElementById('baselineOfferCard').scrollIntoView({ behavior: 'smooth' });
+        setBaselineStatus('Payment received! Waiting for Stripe webhook confirmation ( keep this tab open; backup receipt token saved locally )...', false);
+        for (let attempt = 0; attempt < 15; attempt++) {
+          try {
+            const balRes = await fetch('/billing/credits/balance', {
+              headers: { 'Authorization': 'Bearer ' + pending.creditToken }
+            });
+            if (balRes.ok) {
+              const bal = await balRes.json();
+              if (bal && bal.balanceCents >= 1900) {
+                await executeBaselineWithToken(pending.creditToken, pending.targetUrl);
+                return;
+              }
+            }
+          } catch {}
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        setBaselineStatus('Your payment is still confirming via Stripe webhook. Your backup credit token is pre-filled below—click "Run $19 Baseline with Token" in a few seconds.', false);
+      }
+    })();
 
     async function runFreeMoneroDemo() {
       const out = document.getElementById('consoleOut');
