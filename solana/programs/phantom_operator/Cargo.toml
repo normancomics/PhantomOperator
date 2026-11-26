@@ -15,15 +15,13 @@ crate-type = ["cdylib", "lib"]
 [features]
 no-entrypoint = []
 test-sbf = []
+custom-heap = []
+custom-panic = []
 
 [dependencies]
-borsh = "0.10"
-solana-program = "1.18"
-
-[dev-dependencies]
-solana-program-test = "1.18"
-solana-sdk = "1.18"
-tokio = { version = "1", features = ["full"] }
+borsh = { version = "1.5", features = ["derive"] }
+solana-program = "3.0"
+solana-system-interface = { version = "2.0", features = ["bincode"] }
 
 # Optimise for small binary size — important for the 10 MB BPF limit.
 [profile.release]

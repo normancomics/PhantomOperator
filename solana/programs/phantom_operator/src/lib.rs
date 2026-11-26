@@ -30,9 +30,9 @@ use solana_program::{
     program_error::ProgramError,
     pubkey::Pubkey,
     rent::Rent,
-    system_instruction,
     sysvar::Sysvar,
 };
+use solana_system_interface::instruction as system_instruction;
 
 // ── Entrypoint ────────────────────────────────────────────────────────────────
 entrypoint!(process_instruction);
@@ -313,7 +313,7 @@ mod tests {
             total_invocations: 0,
             total_fees_lamports: 0,
         };
-        let serialised = state.try_to_vec().unwrap();
+        let serialised = borsh::to_vec(&state).unwrap();
         assert_eq!(serialised.len(), RegistryState::LEN);
     }
 
@@ -323,7 +323,7 @@ mod tests {
             skill_id: 2,
             amount_lamports: 10_000_000,
         };
-        let encoded = ix.try_to_vec().unwrap();
+        let encoded = borsh::to_vec(&ix).unwrap();
         let decoded = PhantomInstruction::try_from_slice(&encoded).unwrap();
         assert_eq!(ix, decoded);
     }

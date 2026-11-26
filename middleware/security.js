@@ -63,7 +63,7 @@ function securityHeaders(_req, res, next) {
 
 // ─── Sliding-Window Rate Limiter ─────────────────────────────────────────────
 
-function createRateLimiter({ windowMs = 60_000, max = 60 } = {}) {
+function createRateLimiter({ windowMs = 60_000, max = 60, maxTrackedClients = 10_000 } = {}) {
   const hits = new Map();
 
   const cleanup = setInterval(() => {
@@ -82,13 +82,16 @@ function createRateLimiter({ windowMs = 60_000, max = 60 } = {}) {
   return function rateLimiter(req, res, next) {
     if (process.env.RATE_LIMIT_DISABLED === 'true') return next();
 
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = (forwarded ? String(forwarded).split(',')[0].trim() : req.ip) || 'unknown';
+    const ip = req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
     const now = Date.now();
     const cutoff = now - windowMs;
 
     const prev = (hits.get(ip) || []).filter((t) => t > cutoff);
     prev.push(now);
+    if (!hits.has(ip) && hits.size >= maxTrackedClients) {
+      const oldestKey = hits.keys().next().value;
+      if (oldestKey !== undefined) hits.delete(oldestKey);
+    }
     hits.set(ip, prev);
 
     const remaining = Math.max(0, max - prev.length);

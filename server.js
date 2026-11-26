@@ -178,6 +178,7 @@ app.post('/billing/stripe/website-privacy-baseline-checkout', paidLimiter, valid
   const targetUrl = req.body.url.trim();
   const amountCents = 1900;
   try {
+    await MetadataAgent.assertSafeUrl(targetUrl);
     const purchaseId = crypto.randomBytes(24).toString('base64url');
     const creditToken = creditLedger.createToken();
     creditLedger.createPendingStripePurchase(purchaseId, creditToken, amountCents);
@@ -1042,14 +1043,15 @@ app.get('/SKILL.md', publicLimiter, (_req, res) => {
   res.type('text/markdown').sendFile(path.join(__dirname, 'SKILL.md'));
 });
 
-function renderOfferPage(base, { title, description, headline, body, cta }) {
+function renderOfferPage(base, { canonicalPath = '/', title, description, headline, body, cta }) {
   const safe = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(title)}</title><meta name="description" content="${safe(description)}"><link rel="canonical" href="${base}${cta.href}"><meta property="og:type" content="website"><meta property="og:title" content="${safe(title)}"><meta property="og:description" content="${safe(description)}"><meta property="og:image" content="${base}/phantomoperator-share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${base}/phantomoperator-share-card.png"><style>body{margin:0;background:#07090e;color:#e2e8f0;font:16px system-ui,sans-serif;line-height:1.6}.wrap{max-width:760px;margin:auto;padding:48px 20px}img{width:74px;border:1px solid #00f5d4;border-radius:14px}h1{color:#00f5d4;line-height:1.15}.card{background:#0e131f;border:1px solid #1e293b;border-radius:14px;padding:24px}.btn{display:inline-block;background:linear-gradient(135deg,#00f5d4,#00bbf9);color:#041019;padding:12px 16px;border-radius:8px;font-weight:800;text-decoration:none}a{color:#00f5d4}.small{color:#94a3b8;font-size:.9rem}</style></head><body><main class="wrap"><a href="/"><img src="/logo.png" alt="PhantomOperator logo"></a><div class="card"><h1>${safe(headline)}</h1><p>${safe(body)}</p><p><a class="btn" href="${cta.href}">${safe(cta.label)}</a></p><p class="small">Authorized public targets only. Findings are public-exposure signals for review, not proof of compromise or a penetration test.</p><p><a href="/quickstart">Developer quickstart</a> · <a href="/privacy">Privacy model</a> · <a href="https://x.com/phntmop" target="_blank" rel="noopener noreferrer">@phntmop on X</a></p></div></main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(title)}</title><meta name="description" content="${safe(description)}"><link rel="canonical" href="${base}${canonicalPath}"><meta property="og:type" content="website"><meta property="og:url" content="${base}${canonicalPath}"><meta property="og:title" content="${safe(title)}"><meta property="og:description" content="${safe(description)}"><meta property="og:image" content="${base}/phantomoperator-share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${base}/phantomoperator-share-card.png"><style>body{margin:0;background:#07090e;color:#e2e8f0;font:16px system-ui,sans-serif;line-height:1.6}.wrap{max-width:760px;margin:auto;padding:48px 20px}img{width:74px;border:1px solid #00f5d4;border-radius:14px}h1{color:#00f5d4;line-height:1.15}.card{background:#0e131f;border:1px solid #1e293b;border-radius:14px;padding:24px}.btn{display:inline-block;background:linear-gradient(135deg,#00f5d4,#00bbf9);color:#041019;padding:12px 16px;border-radius:8px;font-weight:800;text-decoration:none}a{color:#00f5d4}.small{color:#94a3b8;font-size:.9rem}</style></head><body><main class="wrap"><a href="/"><img src="/logo.png" alt="PhantomOperator logo"></a><div class="card"><h1>${safe(headline)}</h1><p>${safe(body)}</p><p><a class="btn" href="${cta.href}">${safe(cta.label)}</a></p><p class="small">Authorized public targets only. Findings are public-exposure signals for review, not proof of compromise or a penetration test.</p><p><a href="/quickstart">Developer quickstart</a> · <a href="/privacy">Privacy model</a> · <a href="https://x.com/phntmop" target="_blank" rel="noopener noreferrer">@phntmop on X</a></p></div></main></body></html>`;
 }
 
 app.get('/website-privacy-baseline', publicLimiter, (req, res) => {
   const b = baseUrl(req);
   res.type('html').send(renderOfferPage(b, {
+    canonicalPath: '/website-privacy-baseline',
     title: 'Website Privacy Baseline — $19 Fixed-Scope Audit | PhantomOperator',
     description: 'A $19 Website Privacy Baseline for an authorized public website: headers, metadata, comments, tracker signals, and prioritized remediation guidance.',
     headline: 'Website Privacy Baseline — $19',
@@ -1061,6 +1063,7 @@ app.get('/website-privacy-baseline', publicLimiter, (req, res) => {
 app.get('/free-website-privacy-preview', publicLimiter, (req, res) => {
   const b = baseUrl(req);
   res.type('html').send(renderOfferPage(b, {
+    canonicalPath: '/free-website-privacy-preview',
     title: 'Free Website Privacy Preview | PhantomOperator',
     description: 'Run a free, rate-limited public website privacy preview for headers, metadata, HTML comments, and third-party tracker signals.',
     headline: 'Free Website Privacy Preview',
@@ -1116,6 +1119,22 @@ app.get('/phantomoperator-share-card.png', publicLimiter, (_req, res) => {
 });
 
 // ─── Free evaluation endpoints ──────────────────────────────────────────────
+
+app.get('/preview/metadata-audit', publicLimiter, (req, res) => {
+  const b = baseUrl(req);
+  res.json({
+    endpoint: `${b}/preview/metadata-audit`,
+    method: 'POST',
+    priceUsd: 0,
+    rateLimitPerHour: Number(process.env.RATE_LIMIT_PREVIEW || '5'),
+    description: 'Free rate-limited website privacy & metadata audit preview (up to 3 top-severity findings).',
+    requestBody: { url: 'https://example.com' },
+    paidUpgrades: {
+      x402FullMetadataAudit: { method: 'POST', endpoint: `${b}/skills/metadata-audit`, priceUsd: 0.05 },
+      stripeWebsitePrivacyBaseline: { method: 'POST', endpoint: `${b}/billing/stripe/website-privacy-baseline-checkout`, priceUsd: 19.00 },
+    },
+  });
+});
 
 app.post('/preview/metadata-audit', previewLimiter, async (req, res) => {
   const url = req.body && req.body.url;
@@ -1542,10 +1561,11 @@ app.use((req, res) => {
 // ─── Start Server ────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`PhantomOperator API server running on port ${PORT} (payTo: ${x402.PAY_TO})`);
+  app.listen(PORT, HOST, () => {
+    console.log(`PhantomOperator API server running on port ${PORT} (${HOST}, payTo: ${x402.PAY_TO})`);
   });
 }
 

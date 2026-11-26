@@ -27,26 +27,73 @@
 const axios   = require('axios');
 const cheerio = require('cheerio');
 const dns     = require('node:dns').promises;
+const net     = require('node:net');
 
 const USER_AGENT = 'PhantomOperator-MetaAudit/1.0 (https://github.com/normancomics/PhantomOperator)';
 const REQUEST_TIMEOUT_MS = 15000;
 
 // ── SSRF guard ────────────────────────────────────────────────────────────────
-// Block requests to private/loopback/link-local addresses and special hostnames
-// that would otherwise allow server-side request forgery.
+// Block requests to private/loopback/link-local/CGNAT/reserved addresses and
+// special hostnames (including IPv4-mapped IPv6 addresses) that would otherwise
+// allow server-side request forgery.
 
-const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.|0\.|::1|fc|fd)/i;
-const PRIVATE_HOST_RE = /^(localhost|.*\.local|.*\.internal|metadata\.google\.internal)$/i;
+const PRIVATE_HOST_RE = /^(localhost|.*\.localhost|.*\.local|.*\.internal|metadata\.google\.internal)$/i;
+
+function normalizeIpv6MappedIpv4(clean) {
+  const lower = clean.toLowerCase();
+  if (!lower.startsWith('::ffff:')) return null;
+  const suffix = lower.slice(7);
+  if (net.isIP(suffix) === 4) return suffix;
+  const hexMatch = suffix.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMatch) {
+    const hi = parseInt(hexMatch[1], 16);
+    const lo = parseInt(hexMatch[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+  return null;
+}
 
 function isPrivateIp(address) {
-  const a = String(address || '').toLowerCase();
-  return PRIVATE_IP_RE.test(a) || a === '::' || a === '::1' || a.startsWith('fe80:') || a.startsWith('fc') || a.startsWith('fd');
+  if (!address || typeof address !== 'string') return true;
+  const clean = address.trim().replace(/^\[|\]$/g, '').split('%')[0];
+  const mappedV4 = normalizeIpv6MappedIpv4(clean);
+  const candidate = mappedV4 || clean;
+
+  if (net.isIP(candidate) === 4) {
+    const [a, b, c] = candidate.split('.').map(Number);
+    if (a === 0) return true; // 0.0.0.0/8
+    if (a === 10) return true; // 10.0.0.0/8 RFC1918
+    if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 CGNAT
+    if (a === 127) return true; // 127.0.0.0/8 loopback
+    if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local / cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12 RFC1918
+    if (a === 192 && b === 0 && (c === 0 || c === 2)) return true; // 192.0.0.0/24, 192.0.2.0/24
+    if (a === 192 && b === 168) return true; // 192.168.0.0/16 RFC1918
+    if (a === 198 && (b === 18 || b === 19)) return true; // 198.18.0.0/15 benchmarking
+    if (a === 198 && b === 51 && c === 100) return true; // 198.51.100.0/24 TEST-NET-2
+    if (a === 203 && b === 0 && c === 113) return true; // 203.0.113.0/24 TEST-NET-3
+    if (a >= 224) return true; // 224.0.0.0/4 multicast & 240.0.0.0/4 reserved
+    return false;
+  }
+
+  if (net.isIP(candidate) === 6) {
+    const lower = candidate.toLowerCase();
+    if (lower === '::' || lower === '::1') return true;
+    if (lower.startsWith('fc') || lower.startsWith('fd')) return true; // fc00::/7 ULA
+    if (/^fe[89ab]/.test(lower)) return true; // fe80::/10 link-local
+    if (lower.startsWith('ff')) return true; // ff00::/8 multicast
+    if (lower.startsWith('2001:db8:') || lower === '2001:db8::') return true; // documentation
+    if (lower.startsWith('100::')) return true; // 100::/64 discard
+    return false;
+  }
+
+  return true;
 }
 
 /**
  * Throw if the URL targets a private, loopback, or otherwise disallowed host.
- * This is a best-effort static guard — runtime DNS rebinding is not prevented
- * here but should be addressed at the network layer for production deployments.
+ * `_fetch` pins the approved DNS resolution for the request so a subsequent DNS
+ * response cannot redirect the connection into a private network.
  * @param {string} rawUrl
  */
 async function assertSafeUrl(rawUrl) {
@@ -56,10 +103,19 @@ async function assertSafeUrl(rawUrl) {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('Only HTTP and HTTPS URLs are permitted');
   }
+  if (parsed.username || parsed.password) {
+    throw new Error('URLs with embedded credentials are not permitted');
+  }
 
-  const host = parsed.hostname;
-  if (PRIVATE_HOST_RE.test(host) || PRIVATE_IP_RE.test(host)) {
+  const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host || PRIVATE_HOST_RE.test(host)) {
     throw new Error('Requests to private or internal network addresses are not permitted');
+  }
+  if (net.isIP(host)) {
+    if (isPrivateIp(host)) {
+      throw new Error('Requests to private or internal network addresses are not permitted');
+    }
+    return { parsed, answers: [{ address: host, family: net.isIP(host) }] };
   }
   // Resolve before connecting and reject a hostname that maps to a private
   // address. `_fetch` pins this approved result for the request so a later DNS
@@ -120,6 +176,36 @@ const EXPECTED_SECURITY_HEADERS = [
 
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
 
+const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+
+function buildFindingRecommendation(finding) {
+  if (finding.recommendation) return finding.recommendation;
+  if (finding.category === 'missing-security-header') {
+    const map = {
+      'strict-transport-security': 'Add Strict-Transport-Security: max-age=63072000; includeSubDomains; preload.',
+      'content-security-policy': 'Define a Content-Security-Policy header restricting default-src, script-src, and object-src.',
+      'x-content-type-options': 'Add X-Content-Type-Options: nosniff to prevent MIME-sniffing.',
+      'x-frame-options': 'Add X-Frame-Options: DENY (or frame-ancestors in CSP) to prevent clickjacking.',
+      'referrer-policy': 'Set Referrer-Policy: strict-origin-when-cross-origin or no-referrer.',
+      'permissions-policy': 'Add a Permissions-Policy header disabling unused browser features (camera, microphone, geolocation).',
+    };
+    return map[finding.field] || `Configure the ${finding.field} security response header.`;
+  }
+  if (finding.category === 'http-header') {
+    return `Remove or suppress the "${finding.field}" HTTP response header at your web server or reverse proxy.`;
+  }
+  if (finding.category === 'meta-tag') {
+    return `Remove or scrub the <meta name="${finding.field}"> tag during production template rendering.`;
+  }
+  if (finding.category === 'html-comment') {
+    return 'Strip internal developer, version, and email HTML comments during production builds.';
+  }
+  if (finding.category === 'third-party-resources') {
+    return 'Audit third-party script/style/asset origins; self-host critical assets or add Subresource Integrity (SRI) and CSP allowlists.';
+  }
+  return 'Review and remediate this public-exposure signal.';
+}
+
 // ── MetadataAgent ─────────────────────────────────────────────────────────────
 
 class MetadataAgent {
@@ -147,7 +233,12 @@ class MetadataAgent {
       ...metaFindings,
       ...commentFindings,
       ...resourceFindings,
-    ];
+    ]
+      .map((f) => ({
+        ...f,
+        recommendation: buildFindingRecommendation(f),
+      }))
+      .sort((a, b) => (RISK_ORDER[a.riskLevel] ?? 99) - (RISK_ORDER[b.riskLevel] ?? 99));
 
     const riskCounts = { critical: 0, high: 0, medium: 0, low: 0 };
     for (const f of allFindings) riskCounts[f.riskLevel] = (riskCounts[f.riskLevel] || 0) + 1;
@@ -158,13 +249,20 @@ class MetadataAgent {
       riskCounts.medium   > 0 ? 'medium'   :
       riskCounts.low      > 0 ? 'low'      : 'none';
 
+    const recommendation = MetadataAgent._buildRecommendation(allFindings, overallRisk);
+    const recommendations = Array.from(
+      new Set(allFindings.map((f) => f.recommendation).filter(Boolean))
+    );
+    if (!recommendations.length) recommendations.push(recommendation);
+
     return {
       url:          finalUrl,
       statusCode,
       overallRisk,
       findingCounts: riskCounts,
       findings:     allFindings,
-      recommendation: MetadataAgent._buildRecommendation(allFindings, overallRisk),
+      recommendation,
+      recommendations,
       timestamp:    new Date().toISOString(),
     };
   }
@@ -370,5 +468,8 @@ class MetadataAgent {
     return parts.join(' ') || 'Review findings and remediate by risk level.';
   }
 }
+
+MetadataAgent.assertSafeUrl = assertSafeUrl;
+MetadataAgent.isPrivateIp = isPrivateIp;
 
 module.exports = MetadataAgent;
