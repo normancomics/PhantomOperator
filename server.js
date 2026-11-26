@@ -766,6 +766,14 @@ app.get('/skills', publicLimiter, (req, res) => {
   });
 });
 
+// A concise, copy/paste-ready integration guide for agents and developers.
+// It is intentionally static and public: it removes purchase ambiguity without
+// tracking readers or requiring a dashboard account.
+app.get('/try', publicLimiter, (req, res) => {
+  const b = baseUrl(req);
+  res.type('text/markdown').send(`# Try PhantomOperator\n\nRun an authorized public website privacy preview free, then choose a fixed-price human report or a Base-USDC x402 API call.\n\n## 1. Free preview (no card, no wallet)\n\n\`\`\`bash\ncurl -sS -X POST ${b}/preview/metadata-audit \\\n  -H 'content-type: application/json' \\\n  -d '{"url":"https://example.com"}'\n\`\`\`\n\nIt returns up to three public-exposure signals. It does not scan private systems or require credentials.\n\n## 2. Full human Website Privacy Baseline — $19\n\nOpen ${b}/website-privacy-baseline, enter a public website you own or are authorized to assess, and pay by card or Link through Stripe Checkout. The completed report includes all observed findings and prioritized remediation steps.\n\n## 3. Agent/developer API — Base-USDC x402\n\nFetch the payment requirements first:\n\n\`\`\`bash\ncurl -i ${b}/skills/metadata-audit\n\`\`\`\n\nThen submit an x402 payment credential to \`POST ${b}/skills/metadata-audit\`. Current discovery documents:\n\n- ${b}/.well-known/x402\n- ${b}/openapi.json\n- ${b}/mcp\n- ${b}/.well-known/agent-card.json\n\n## Scope\n\nOnly assess targets you own or are authorized to assess. Results are public-exposure signals for review, not a penetration test or proof of compromise.\n`);
+});
+
 app.get('/.well-known/402index-verify.txt', (_req, res) => {
   res.type('text/plain').send('01c6c7fe92a9ddae4370753deb04b150a0495af525725acdd6aaeb01ae8a6c96');
 });
@@ -1031,7 +1039,7 @@ app.get('/robots.txt', publicLimiter, (req, res) => {
 
 app.get('/sitemap.xml', publicLimiter, (req, res) => {
   const b = baseUrl(req);
-  const urls = ['/', '/app', '/website-privacy-baseline', '/free-website-privacy-preview', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/preview/metadata-audit', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
+  const urls = ['/', '/app', '/website-privacy-baseline', '/free-website-privacy-preview', '/try', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/preview/metadata-audit', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
   res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${b}${u}</loc></url>`).join('')}</urlset>`);
 });
 
