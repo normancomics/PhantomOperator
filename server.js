@@ -603,12 +603,12 @@ function renderLandingHtml(base) {
 <meta property="og:title" content="PhantomOperator — Free Website Privacy Preview">
 <meta property="og:description" content="See public headers, metadata, HTML comments, and tracker signals. Free preview first; $19 fixed-scope Website Privacy Baseline available.">
 <meta property="og:url" content="${base}/">
-<meta property="og:image" content="${base}/logo.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${base}/phantomoperator-share-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@phntmop">
 <meta name="twitter:title" content="PhantomOperator — Free Website Privacy Preview">
 <meta name="twitter:description" content="Authorized public website privacy checks for people and agents.">
-<meta name="twitter:image" content="${base}/logo.png">
+<meta name="twitter:image" content="${base}/phantomoperator-share-card.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"PhantomOperator","applicationCategory":"SecurityApplication","operatingSystem":"Web","url":"${base}/","description":"Authorized public website privacy and metadata checks with a free preview and a fixed-scope Website Privacy Baseline.","offers":{"@type":"Offer","price":"19.00","priceCurrency":"USD","description":"Website Privacy Baseline"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
@@ -1044,7 +1044,7 @@ app.get('/SKILL.md', publicLimiter, (_req, res) => {
 
 function renderOfferPage(base, { title, description, headline, body, cta }) {
   const safe = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(title)}</title><meta name="description" content="${safe(description)}"><link rel="canonical" href="${base}${cta.href}"><meta property="og:type" content="website"><meta property="og:title" content="${safe(title)}"><meta property="og:description" content="${safe(description)}"><meta property="og:image" content="${base}/logo.png"><style>body{margin:0;background:#07090e;color:#e2e8f0;font:16px system-ui,sans-serif;line-height:1.6}.wrap{max-width:760px;margin:auto;padding:48px 20px}img{width:74px;border:1px solid #00f5d4;border-radius:14px}h1{color:#00f5d4;line-height:1.15}.card{background:#0e131f;border:1px solid #1e293b;border-radius:14px;padding:24px}.btn{display:inline-block;background:linear-gradient(135deg,#00f5d4,#00bbf9);color:#041019;padding:12px 16px;border-radius:8px;font-weight:800;text-decoration:none}a{color:#00f5d4}.small{color:#94a3b8;font-size:.9rem}</style></head><body><main class="wrap"><a href="/"><img src="/logo.png" alt="PhantomOperator logo"></a><div class="card"><h1>${safe(headline)}</h1><p>${safe(body)}</p><p><a class="btn" href="${cta.href}">${safe(cta.label)}</a></p><p class="small">Authorized public targets only. Findings are public-exposure signals for review, not proof of compromise or a penetration test.</p><p><a href="/quickstart">Developer quickstart</a> · <a href="/privacy">Privacy model</a> · <a href="https://x.com/phntmop" target="_blank" rel="noopener noreferrer">@phntmop on X</a></p></div></main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(title)}</title><meta name="description" content="${safe(description)}"><link rel="canonical" href="${base}${cta.href}"><meta property="og:type" content="website"><meta property="og:title" content="${safe(title)}"><meta property="og:description" content="${safe(description)}"><meta property="og:image" content="${base}/phantomoperator-share-card.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${base}/phantomoperator-share-card.png"><style>body{margin:0;background:#07090e;color:#e2e8f0;font:16px system-ui,sans-serif;line-height:1.6}.wrap{max-width:760px;margin:auto;padding:48px 20px}img{width:74px;border:1px solid #00f5d4;border-radius:14px}h1{color:#00f5d4;line-height:1.15}.card{background:#0e131f;border:1px solid #1e293b;border-radius:14px;padding:24px}.btn{display:inline-block;background:linear-gradient(135deg,#00f5d4,#00bbf9);color:#041019;padding:12px 16px;border-radius:8px;font-weight:800;text-decoration:none}a{color:#00f5d4}.small{color:#94a3b8;font-size:.9rem}</style></head><body><main class="wrap"><a href="/"><img src="/logo.png" alt="PhantomOperator logo"></a><div class="card"><h1>${safe(headline)}</h1><p>${safe(body)}</p><p><a class="btn" href="${cta.href}">${safe(cta.label)}</a></p><p class="small">Authorized public targets only. Findings are public-exposure signals for review, not proof of compromise or a penetration test.</p><p><a href="/quickstart">Developer quickstart</a> · <a href="/privacy">Privacy model</a> · <a href="https://x.com/phntmop" target="_blank" rel="noopener noreferrer">@phntmop on X</a></p></div></main></body></html>`;
 }
 
 app.get('/website-privacy-baseline', publicLimiter, (req, res) => {
@@ -1109,6 +1109,10 @@ app.get('/terms', publicLimiter, (_req, res) => {
 
 app.get('/logo.png', publicLimiter, (_req, res) => {
   res.type('image/png').sendFile(path.join(__dirname, 'assets', 'phantom-operator-logo.png'));
+});
+
+app.get('/phantomoperator-share-card.png', publicLimiter, (_req, res) => {
+  res.type('image/png').sendFile(path.join(__dirname, 'assets', 'phantomoperator-share-card.png'));
 });
 
 // ─── Free evaluation endpoints ──────────────────────────────────────────────
