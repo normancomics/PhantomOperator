@@ -1,31 +1,55 @@
 # PhantomOperator quickstart
 
-PhantomOperator provides authorized privacy and public-exposure checks for people and agents.
+PhantomOperator provides authorized public-exposure and privacy checks for people and agents.
 
-## Before calling
+- **Human website check:** [Free Website Privacy Preview](https://freysaai.freysa.dev/free-website-privacy-preview)
+- **Human fixed-scope audit:** [$19 Website Privacy Baseline](https://freysaai.freysa.dev/website-privacy-baseline)
+- **Agent/API discovery:** [OpenAPI](https://freysaai.freysa.dev/openapi.json), [x402 requirements](https://freysaai.freysa.dev/.well-known/x402), [MCP](https://freysaai.freysa.dev/mcp), and [A2A agent card](https://freysaai.freysa.dev/.well-known/agent-card.json)
 
-1. Read the current operation schema at `/openapi.json`.
-2. Use only data you are authorized to assess. Never send secrets, seed phrases, or passwords.
-3. Use the currently active payment rail: **Base x402** — `POST /skills/<skill>` with USDC on Base.
+Use only on public targets you own or are explicitly authorized to assess. Do not submit secrets, private keys, passwords, or another person’s personal data without permission.
 
-## x402 flow
+## 1. Run a free website privacy preview
 
-1. `POST` valid JSON to a `/skills/*` route.
-2. Receive HTTP `402` and inspect its payment requirement: recipient, amount, asset, network, resource, and expiry.
-3. Sign and resend through an x402-compatible client.
-4. Validate the returned JSON against the OpenAPI response expectations.
+```bash
+curl -sS https://freysaai.freysa.dev/preview/metadata-audit \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://example.com"}'
+```
 
-## MCP flow
+The free, rate-limited preview returns a limited set of public signals from headers, metadata, HTML comments, and tracker discovery.
 
-Initialize at `POST /mcp`, call `tools/list`, then call a named tool. The response returns the exact paid HTTP operation and payment requirements without exposing credentials.
+## 2. Request exact x402 payment terms for the complete API audit
 
-## Free evaluation
+```bash
+curl -i https://freysaai.freysa.dev/skills/metadata-audit \
+  -X POST \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://example.com"}'
+```
 
-- `POST /preview/metadata-audit` accepts `{ "url": "https://example.com" }` and returns a limited, rate-controlled metadata summary (5 previews/client/hour).
-- `/sample-report` shows the shape and limitations of a sample privacy report.
-- `/demo/monero-decode` returns a free address-decoding preview.
-- `/usage` shows privacy-preserving aggregate, settled-service telemetry.
+The first response returns payment requirements for Base native USDC through x402. Review those exact terms before authorizing a payment. The metadata audit is currently listed at **$0.05 USDC**.
 
-## Updates and support
+## 3. Use the MCP endpoint
 
-Follow [@phntmop on X](https://x.com/phntmop) for product updates. Contact `admin@freysaai.freysa.dev` with an endpoint, timestamp, and redacted error only. Do not send keys or payment credentials.
+The MCP endpoint is:
+
+```text
+https://freysaai.freysa.dev/mcp
+```
+
+Discover the current tool list through MCP `tools/list`. API builders can use the OpenAPI document for request and response schemas.
+
+## Human checkout
+
+The Website Privacy Baseline is a one-time **$19** Stripe Checkout offer. It covers one authorized public website and returns a prioritized remediation checklist after payment confirmation. The page stores the receipt token in the browser so the report can run automatically when Stripe’s webhook settles.
+
+## Links
+
+- Website: https://freysaai.freysa.dev
+- Free preview: https://freysaai.freysa.dev/free-website-privacy-preview
+- $19 baseline: https://freysaai.freysa.dev/website-privacy-baseline
+- OpenAPI: https://freysaai.freysa.dev/openapi.json
+- x402: https://freysaai.freysa.dev/.well-known/x402
+- Agent Card: https://freysaai.freysa.dev/.well-known/agent-card.json
+- X: https://x.com/phntmop

@@ -595,7 +595,21 @@ function renderLandingHtml(base) {
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhantomOperator — Privacy & Public-Exposure Checks</title>
+<title>PhantomOperator — Free Website Privacy Preview & $19 Baseline</title>
+<meta name="description" content="Check what your public website reveals. Run a free metadata preview or buy a $19 Website Privacy Baseline with an evidence-based remediation checklist. Authorized targets only.">
+<link rel="canonical" href="${base}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PhantomOperator">
+<meta property="og:title" content="PhantomOperator — Free Website Privacy Preview">
+<meta property="og:description" content="See public headers, metadata, HTML comments, and tracker signals. Free preview first; $19 fixed-scope Website Privacy Baseline available.">
+<meta property="og:url" content="${base}/">
+<meta property="og:image" content="${base}/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@phntmop">
+<meta name="twitter:title" content="PhantomOperator — Free Website Privacy Preview">
+<meta name="twitter:description" content="Authorized public website privacy checks for people and agents.">
+<meta name="twitter:image" content="${base}/logo.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"PhantomOperator","applicationCategory":"SecurityApplication","operatingSystem":"Web","url":"${base}/","description":"Authorized public website privacy and metadata checks with a free preview and a fixed-scope Website Privacy Baseline.","offers":{"@type":"Offer","price":"19.00","priceCurrency":"USD","description":"Website Privacy Baseline"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
 <style>
@@ -1016,7 +1030,7 @@ app.get('/robots.txt', publicLimiter, (req, res) => {
 
 app.get('/sitemap.xml', publicLimiter, (req, res) => {
   const b = baseUrl(req);
-  const urls = ['/', '/app', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/preview/metadata-audit', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
+  const urls = ['/', '/app', '/website-privacy-baseline', '/free-website-privacy-preview', '/manifest', '/skills', '/openapi.json', '/SKILL.md', '/quickstart', '/sample-report', '/preview/metadata-audit', '/usage', '/status', '/llms.txt', '/.well-known/x402', '/.well-known/agent-card.json', '/.well-known/agent-registration.json'];
   res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${b}${u}</loc></url>`).join('')}</urlset>`);
 });
 
@@ -1026,6 +1040,33 @@ app.get('/llms.txt', publicLimiter, (_req, res) => {
 
 app.get('/SKILL.md', publicLimiter, (_req, res) => {
   res.type('text/markdown').sendFile(path.join(__dirname, 'SKILL.md'));
+});
+
+function renderOfferPage(base, { title, description, headline, body, cta }) {
+  const safe = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safe(title)}</title><meta name="description" content="${safe(description)}"><link rel="canonical" href="${base}${cta.href}"><meta property="og:type" content="website"><meta property="og:title" content="${safe(title)}"><meta property="og:description" content="${safe(description)}"><meta property="og:image" content="${base}/logo.png"><style>body{margin:0;background:#07090e;color:#e2e8f0;font:16px system-ui,sans-serif;line-height:1.6}.wrap{max-width:760px;margin:auto;padding:48px 20px}img{width:74px;border:1px solid #00f5d4;border-radius:14px}h1{color:#00f5d4;line-height:1.15}.card{background:#0e131f;border:1px solid #1e293b;border-radius:14px;padding:24px}.btn{display:inline-block;background:linear-gradient(135deg,#00f5d4,#00bbf9);color:#041019;padding:12px 16px;border-radius:8px;font-weight:800;text-decoration:none}a{color:#00f5d4}.small{color:#94a3b8;font-size:.9rem}</style></head><body><main class="wrap"><a href="/"><img src="/logo.png" alt="PhantomOperator logo"></a><div class="card"><h1>${safe(headline)}</h1><p>${safe(body)}</p><p><a class="btn" href="${cta.href}">${safe(cta.label)}</a></p><p class="small">Authorized public targets only. Findings are public-exposure signals for review, not proof of compromise or a penetration test.</p><p><a href="/quickstart">Developer quickstart</a> · <a href="/privacy">Privacy model</a> · <a href="https://x.com/phntmop" target="_blank" rel="noopener noreferrer">@phntmop on X</a></p></div></main></body></html>`;
+}
+
+app.get('/website-privacy-baseline', publicLimiter, (req, res) => {
+  const b = baseUrl(req);
+  res.type('html').send(renderOfferPage(b, {
+    title: 'Website Privacy Baseline — $19 Fixed-Scope Audit | PhantomOperator',
+    description: 'A $19 Website Privacy Baseline for an authorized public website: headers, metadata, comments, tracker signals, and prioritized remediation guidance.',
+    headline: 'Website Privacy Baseline — $19',
+    body: 'Get a fixed-scope privacy baseline for one public website you own or are authorized to assess. The report reviews public HTTP and security headers, framework/server fingerprinting, author and generator metadata, HTML comments, third-party tracker signals, and a prioritized remediation checklist.',
+    cta: { href: '/#baselineOfferCard', label: 'Start the $19 Website Privacy Baseline' },
+  }));
+});
+
+app.get('/free-website-privacy-preview', publicLimiter, (req, res) => {
+  const b = baseUrl(req);
+  res.type('html').send(renderOfferPage(b, {
+    title: 'Free Website Privacy Preview | PhantomOperator',
+    description: 'Run a free, rate-limited public website privacy preview for headers, metadata, HTML comments, and third-party tracker signals.',
+    headline: 'Free Website Privacy Preview',
+    body: 'Start with a free limited preview of a public website you own or are authorized to assess. It identifies public headers, metadata, HTML comments, and tracker signals so you can decide whether to order the full Website Privacy Baseline.',
+    cta: { href: '/#freePreviewCard', label: 'Run a Free Preview' },
+  }));
 });
 
 app.get('/quickstart', publicLimiter, (_req, res) => {
